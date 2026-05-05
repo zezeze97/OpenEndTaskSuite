@@ -199,6 +199,13 @@ def set_permission(serial, permission, target):
     adb_shell(serial, f"pm {action} {PACKAGE} {permission}", check=False)
 
 
+def clear_runtime_environment(serial):
+    adb_shell(serial, "input keyevent HOME", check=False)
+    adb_shell(serial, f"am force-stop {PACKAGE}", check=False)
+    adb_shell(serial, "am kill-all", check=False)
+    adb_shell(serial, "input keyevent HOME", check=False)
+
+
 def sample_route_params(template, rng):
     route = dict(rng.choice(template["parameters"]["routes"]))
     mode = dict(rng.choice(template["parameters"]["route_modes"]))
@@ -511,7 +518,7 @@ def save_instance(task):
 
 def init_task(serial, task):
     ensure_device(serial)
-    adb_shell(serial, f"am force-stop {PACKAGE}", check=False)
+    clear_runtime_environment(serial)
     init = task.get("init", {})
     if init.get("clear_db_rows"):
         delete_suite_db_rows(serial)

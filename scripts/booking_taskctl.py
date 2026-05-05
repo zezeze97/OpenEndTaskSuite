@@ -445,6 +445,13 @@ def init_permissions(serial, permissions):
         adb_shell(serial, f"pm {action} {PACKAGE} {permission}", check=False)
 
 
+def clear_runtime_environment(serial):
+    adb_shell(serial, "input keyevent HOME", check=False)
+    adb_shell(serial, f"am force-stop {PACKAGE}", check=False)
+    adb_shell(serial, "am kill-all", check=False)
+    adb_shell(serial, "input keyevent HOME", check=False)
+
+
 def permission_granted(serial, permission):
     output = adb_shell(serial, f"dumpsys package {PACKAGE}")
     marker = f"{permission}: granted=true"
@@ -536,7 +543,7 @@ def saba_query_matches(serial, expected):
 
 def init_task(serial, task):
     ensure_device(serial)
-    adb_shell(serial, f"am force-stop {PACKAGE}", check=False)
+    clear_runtime_environment(serial)
     init = task.get("init", {})
     if init.get("clear_saba_cache"):
         adb_shell(serial, "rm -f /data/user/0/com.booking/cache/saba-http-cache/*", check=False)

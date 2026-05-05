@@ -44,6 +44,8 @@ python3 scripts/booking_taskctl.py verify run_sort_42
 python3 scripts/booking_taskctl.py init run_sort_42
 ```
 
+每次 `init` 都会先做运行环境清理：回到 Home、强制停止目标 app、执行一次系统后台清理，再回到 Home。之后才写入该任务的初始化状态并启动目标 app。
+
 验证并输出奖励：
 
 ```bash
@@ -206,4 +208,4 @@ python3 scripts/amap_taskctl.py verify amap_point_7
 
 ## 初始化原则
 
-每个实例初始化到“明确未完成但用户可自然完成”的状态。例如让用户把货币改成 CAD 前，初始化会把 `currency` 设置为 `USD`；让用户做复杂住宿筛选前，初始化会放入另一组不同的搜索参数，并清空 SABA 搜索缓存，避免旧结果页请求污染验证。
+每个实例初始化到“明确未完成但用户可自然完成”的状态，并在写入任务初始化数据前先回到 Home、强制停止目标 app、清理后台、再回到 Home。例如让用户把货币改成 CAD 前，初始化会把 `currency` 设置为 `USD`；让用户做复杂住宿筛选前，初始化会放入另一组不同的搜索参数，并清空 SABA 搜索缓存，避免旧结果页请求污染验证。
