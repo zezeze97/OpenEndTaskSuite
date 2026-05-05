@@ -1,0 +1,352 @@
+{
+  "suite_id": "booking_android_openendworld_v1",
+  "app": {
+    "name": "Booking.com",
+    "package": "com.booking",
+    "avd_name": "OpenEndWorld",
+    "tested_version": "64.6.0.1"
+  },
+  "verification_model": {
+    "principle": "Rewards are computed from Android package state and Booking private app data. The evaluator does not inspect screenshots or UI text.",
+    "app_data_root": "/data/user/0/com.booking",
+    "primary_files": [
+      "shared_prefs/com.booking_preferences.xml",
+      "shared_prefs/gdpr_settings.xml"
+    ],
+    "system_sources": [
+      "dumpsys package com.booking runtime permissions"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "stay_search_paris_family",
+      "instruction": "在 Booking 里搜索巴黎的住宿，入住 2026-06-15，退房 2026-06-18，2 位成人、2 位儿童（8 岁和 12 岁），1 间房。",
+      "category": "accommodation_search",
+      "init": {
+        "query": {
+          "arrival_date": "2026-05-20",
+          "departure_date": "2026-05-21",
+          "location": {
+            "id": -2601889,
+            "city": "London",
+            "type": "city",
+            "name": "London",
+            "country_code": "gb"
+          },
+          "adult_count": 1,
+          "children_ages": [],
+          "room_count": 2,
+          "travel_purpose": "not_selected"
+        }
+      },
+      "verify": {
+        "query": {
+          "arrival_date": "2026-06-15",
+          "departure_date": "2026-06-18",
+          "location_contains": "Paris",
+          "country_code": "fr",
+          "adult_count": 2,
+          "children_ages": [8, 12],
+          "room_count": 1
+        }
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "dates": 0.25,
+          "destination": 0.25,
+          "occupancy": 0.35,
+          "rooms": 0.15
+        }
+      }
+    },
+    {
+      "id": "stay_search_tokyo_solo",
+      "instruction": "在 Booking 里查找东京的住宿，入住 2026-07-10，退房 2026-07-12，只住 1 位成人，1 间房。",
+      "category": "accommodation_search",
+      "init": {
+        "query": {
+          "arrival_date": "2026-06-01",
+          "departure_date": "2026-06-02",
+          "location": {
+            "id": -1456928,
+            "city": "Osaka",
+            "type": "city",
+            "name": "Osaka",
+            "country_code": "jp"
+          },
+          "adult_count": 2,
+          "children_ages": [],
+          "room_count": 2,
+          "travel_purpose": "not_selected"
+        }
+      },
+      "verify": {
+        "query": {
+          "arrival_date": "2026-07-10",
+          "departure_date": "2026-07-12",
+          "location_contains": "Tokyo",
+          "country_code": "jp",
+          "adult_count": 1,
+          "children_ages": [],
+          "room_count": 1
+        }
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "dates": 0.3,
+          "destination": 0.3,
+          "occupancy": 0.25,
+          "rooms": 0.15
+        }
+      }
+    },
+    {
+      "id": "stay_search_new_york_two_rooms",
+      "instruction": "在 Booking 里搜索纽约的住宿，入住 2026-08-05，退房 2026-08-09，4 位成人，分成 2 间房。",
+      "category": "accommodation_search",
+      "init": {
+        "query": {
+          "arrival_date": "2026-07-01",
+          "departure_date": "2026-07-02",
+          "location": {
+            "id": -2601889,
+            "city": "London",
+            "type": "city",
+            "name": "London",
+            "country_code": "gb"
+          },
+          "adult_count": 2,
+          "children_ages": [],
+          "room_count": 1,
+          "travel_purpose": "not_selected"
+        }
+      },
+      "verify": {
+        "query": {
+          "arrival_date": "2026-08-05",
+          "departure_date": "2026-08-09",
+          "location_contains": "New York",
+          "country_code": "us",
+          "adult_count": 4,
+          "children_ages": [],
+          "room_count": 2
+        }
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "dates": 0.25,
+          "destination": 0.3,
+          "occupancy": 0.25,
+          "rooms": 0.2
+        }
+      }
+    },
+    {
+      "id": "set_currency_eur",
+      "instruction": "把 Booking 里的货币单位改成欧元 EUR。",
+      "category": "preferences",
+      "init": {
+        "prefs": {
+          "currency": "USD"
+        }
+      },
+      "verify": {
+        "prefs": {
+          "currency": "EUR"
+        }
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "currency": 1.0
+        }
+      }
+    },
+    {
+      "id": "set_currency_jpy",
+      "instruction": "把 Booking 里的货币单位改成日元 JPY。",
+      "category": "preferences",
+      "init": {
+        "prefs": {
+          "currency": "USD"
+        }
+      },
+      "verify": {
+        "prefs": {
+          "currency": "JPY"
+        }
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "currency": 1.0
+        }
+      }
+    },
+    {
+      "id": "set_language_spanish",
+      "instruction": "把 Booking app 的语言改成西班牙语。",
+      "category": "preferences",
+      "init": {
+        "prefs": {
+          "locale": "en"
+        }
+      },
+      "verify": {
+        "prefs": {
+          "locale": "es"
+        }
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "locale": 1.0
+        }
+      }
+    },
+    {
+      "id": "set_language_french",
+      "instruction": "把 Booking app 的语言改成法语。",
+      "category": "preferences",
+      "init": {
+        "prefs": {
+          "locale": "en"
+        }
+      },
+      "verify": {
+        "prefs": {
+          "locale": "fr"
+        }
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "locale": 1.0
+        }
+      }
+    },
+    {
+      "id": "privacy_disable_marketing",
+      "instruction": "在 Booking 的隐私或 Cookie 设置里关闭营销类 Cookie，功能类和分析类保持开启。",
+      "category": "privacy",
+      "init": {
+        "gdpr": {
+          "marketing": 1,
+          "functional": 1,
+          "analytical": 1
+        }
+      },
+      "verify": {
+        "gdpr": {
+          "marketing": 0,
+          "functional": 1,
+          "analytical": 1
+        }
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "marketing": 0.6,
+          "functional": 0.2,
+          "analytical": 0.2
+        }
+      }
+    },
+    {
+      "id": "privacy_disable_nonessential",
+      "instruction": "在 Booking 的隐私或 Cookie 设置里只保留必要/功能类 Cookie，关闭营销类和分析类 Cookie。",
+      "category": "privacy",
+      "init": {
+        "gdpr": {
+          "marketing": 1,
+          "functional": 1,
+          "analytical": 1
+        }
+      },
+      "verify": {
+        "gdpr": {
+          "marketing": 0,
+          "functional": 1,
+          "analytical": 0
+        }
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "marketing": 0.35,
+          "functional": 0.3,
+          "analytical": 0.35
+        }
+      }
+    },
+    {
+      "id": "disable_booking_notifications",
+      "instruction": "关闭 Booking app 的通知权限。",
+      "category": "android_permission",
+      "init": {
+        "permissions": {
+          "android.permission.POST_NOTIFICATIONS": true
+        }
+      },
+      "verify": {
+        "permissions": {
+          "android.permission.POST_NOTIFICATIONS": false
+        }
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "android.permission.POST_NOTIFICATIONS": 1.0
+        }
+      }
+    },
+    {
+      "id": "enable_booking_location",
+      "instruction": "允许 Booking app 使用当前位置。",
+      "category": "android_permission",
+      "init": {
+        "permissions": {
+          "android.permission.ACCESS_FINE_LOCATION": false,
+          "android.permission.ACCESS_COARSE_LOCATION": false
+        }
+      },
+      "verify": {
+        "permissions": {
+          "android.permission.ACCESS_FINE_LOCATION": true,
+          "android.permission.ACCESS_COARSE_LOCATION": true
+        }
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "android.permission.ACCESS_FINE_LOCATION": 0.6,
+          "android.permission.ACCESS_COARSE_LOCATION": 0.4
+        }
+      }
+    },
+    {
+      "id": "disable_booking_camera",
+      "instruction": "关闭 Booking app 的相机权限。",
+      "category": "android_permission",
+      "init": {
+        "permissions": {
+          "android.permission.CAMERA": true
+        }
+      },
+      "verify": {
+        "permissions": {
+          "android.permission.CAMERA": false
+        }
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "android.permission.CAMERA": 1.0
+        }
+      }
+    }
+  ]
+}
