@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 import argparse
+import copy
+import datetime as dt
 import json
 import os
+import random
 import subprocess
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlparse
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SUITE_PATH = ROOT / "suites" / "booking_app_tasks.json"
+STATE_DIR = ROOT / ".task_state"
 PACKAGE = "com.booking"
 APP_ROOT = f"/data/user/0/{PACKAGE}"
 PREFS_PATH = f"{APP_ROOT}/shared_prefs/com.booking_preferences.xml"
@@ -42,7 +47,17 @@ def find_task(suite, task_id):
     for task in suite["tasks"]:
         if task["id"] == task_id:
             return task
+    instance_path = STATE_DIR / f"{task_id}.json"
+    if instance_path.exists():
+        return json.loads(instance_path.read_text(encoding="utf-8"))
     raise SystemExit(f"Unknown task id: {task_id}")
+
+
+def find_template(suite, template_id):
+    for template in suite.get("task_templates", []):
+        if template["id"] == template_id:
+            return template
+    raise SystemExit(f"Unknown template id: {template_id}")
 
 
 def ensure_device(serial):
@@ -159,6 +174,178 @@ def normalized_query(query):
     return out
 
 
+def resolve_base_template(suite, template):
+    inherited = template.get("parameters", {}).get("inherits")
+    if not inherited:
+        return template
+    return find_template(suite, inherited)
+
+
+def sample_date(rng, start, end):
+    start_date = dt.date.fromisoformat(start)
+    end_date = dt.date.fromisoformat(end)
+    return start_date + dt.timedelta(days=rng.randint(0, (end_date - start_date).days))
+
+
+def sample_children(rng, spec):
+    count = rng.choice(spec["count"])
+    return sorted(rng.randint(spec["age_min"], spec["age_max"]) for _ in range(count))
+
+
+def sample_search_params(suite, template, rng):
+    params = resolve_base_template(suite, template)["parameters"]
+    destination = copy.deepcopy(rng.choice(params["destinations"]))
+    arrival = sample_date(rng, params["arrival_start"], params["arrival_end"])
+    departure = arrival + dt.timedelta(days=rng.choice(params["nights"]))
+    return {
+        "destination": destination,
+        "arrival_date": arrival.isoformat(),
+        "departure_date": departure.isoformat(),
+        "adult_count": rng.choice(params["adult_count"]),
+        "children_ages": sample_children(rng, params["children"]),
+        "room_count": rng.choice(params["room_count"]),
+    }
+
+
+def params_signature(params):
+    return {
+        "destination": params["destination"]["name"],
+        "dates": [params["arrival_date"], params["departure_date"]],
+        "adult_count": params["adult_count"],
+        "children_ages": params["children_ages"],
+        "room_count": params["room_count"],
+    }
+
+
+def shares_reward_dimension(left, right):
+    return (
+        left["destination"]["name"] == right["destination"]["name"]
+        or left["arrival_date"] == right["arrival_date"]
+        or left["departure_date"] == right["departure_date"]
+        or left["adult_count"] == right["adult_count"]
+        or left["children_ages"] == right["children_ages"]
+        or left["room_count"] == right["room_count"]
+    )
+
+
+def params_to_query(params, sort=None, travel_purpose="not_selected"):
+    destination = params["destination"]
+    return {
+        "arrival_date": params["arrival_date"],
+        "departure_date": params["departure_date"],
+        "location": {
+            "id": destination["id"],
+            "city": destination["name"],
+            "type": destination.get("type", "city"),
+            "name": destination["name"],
+            "country_code": destination["country_code"],
+        },
+        "adult_count": params["adult_count"],
+        "children_ages": params["children_ages"],
+        "room_count": params["room_count"],
+        "sort": sort or {"id": "auto", "name": "auto"},
+        "travel_purpose": travel_purpose,
+    }
+
+
+def occupancy_zh(params):
+    parts = [f"{params['adult_count']} 位成人"]
+    if params["children_ages"]:
+        ages = " 和 ".join(f"{age} 岁" for age in params["children_ages"])
+        parts.append(f"{len(params['children_ages'])} 位儿童（{ages}）")
+    return "、".join(parts)
+
+
+def materialize_template(suite, template, seed=None, instance_id=None):
+    if seed is None:
+        seed = random.SystemRandom().randint(1, 2**31 - 1)
+    rng = random.Random(seed)
+    target = sample_search_params(suite, template, rng)
+    baseline = sample_search_params(suite, template, rng)
+    attempts = 0
+    while shares_reward_dimension(target, baseline) and attempts < 100:
+        baseline = sample_search_params(suite, template, rng)
+        attempts += 1
+
+    params = template.get("parameters", {})
+    sort = None
+    travel_purpose = None
+    filter_option = None
+    if "sort_options" in params:
+        sort = copy.deepcopy(rng.choice(params["sort_options"]))
+    if "travel_purpose" in params:
+        travel_purpose = params["travel_purpose"]["id"]
+    if "filters" in params:
+        filter_option = copy.deepcopy(rng.choice(params["filters"]))
+
+    instruction = template["instruction_template"].format(
+        destination_zh=target["destination"]["name_zh"],
+        arrival_date=target["arrival_date"],
+        departure_date=target["departure_date"],
+        occupancy_zh=occupancy_zh(target),
+        room_count_zh=f"{target['room_count']} 间房",
+        sort_zh=sort["name_zh"] if sort else "",
+        filter_zh=filter_option["name_zh"] if filter_option else "",
+    )
+    if instance_id is None:
+        instance_id = f"{template['id']}_{seed}"
+
+    target_query = params_to_query(
+        target,
+        sort={"id": sort["id"], "name": sort["name"]} if sort else None,
+        travel_purpose=travel_purpose or "not_selected",
+    )
+    baseline_query = params_to_query(baseline)
+    verify_query = {
+        "arrival_date": target["arrival_date"],
+        "departure_date": target["departure_date"],
+        "location_contains": target["destination"]["name"],
+        "country_code": target["destination"]["country_code"],
+        "adult_count": target["adult_count"],
+        "children_ages": target["children_ages"],
+        "room_count": target["room_count"],
+    }
+    if sort:
+        verify_query["sort"] = {"id": sort["id"], "name": sort["name"]}
+    if travel_purpose:
+        verify_query["travel_purpose"] = travel_purpose
+
+    task = {
+        "id": instance_id,
+        "template_id": template["id"],
+        "seed": seed,
+        "instruction": instruction,
+        "category": template["category"],
+        "parameters": {
+            "target": params_signature(target),
+            "baseline": params_signature(baseline),
+        },
+        "init": {"query": baseline_query},
+        "verify": {"query": verify_query},
+        "reward": copy.deepcopy(template["reward"]),
+    }
+    if filter_option:
+        task["init"]["clear_saba_cache"] = True
+        task["parameters"]["filter"] = filter_option["id"]
+        task["verify"]["latest_saba_query"] = {
+            "destination": target["destination"]["name"],
+            "arrival_date": target["arrival_date"],
+            "departure_date": target["departure_date"],
+            "param": filter_option["saba_param"],
+            "contains_any": filter_option["contains_any"],
+        }
+    target_query.pop("sort", None)
+    task["parameters"]["target_query_example"] = target_query
+    return task
+
+
+def save_instance(task):
+    STATE_DIR.mkdir(exist_ok=True)
+    path = STATE_DIR / f"{task['id']}.json"
+    path.write_text(json.dumps(task, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
 def set_query(serial, query):
     query_json = json.dumps(normalized_query(query), separators=(",", ":"), ensure_ascii=False)
     update_xml_values(serial, PREFS_PATH, {
@@ -221,13 +408,51 @@ def any_query_matches(serial, expected):
         )
     if "room_count" in expected:
         details["rooms"] = field_ok("room_count")
+    if "sort" in expected:
+        details["sort"] = any(
+            query.get("sort", {}).get("id") == expected["sort"].get("id")
+            or query.get("sort", {}).get("name") == expected["sort"].get("name")
+            for query in queries
+        )
+    if "travel_purpose" in expected:
+        details["travel_purpose"] = field_ok("travel_purpose")
     return details
+
+
+def latest_saba_urls(serial):
+    command = (
+        "for f in /data/user/0/com.booking/cache/saba-http-cache/*; do "
+        "strings \"$f\" 2>/dev/null | grep -E '^https?://.*mobile\\.saba' | "
+        "while read u; do echo \"$(stat -c %Y \"$f\") $u\"; done; "
+        "done | sort -nr"
+    )
+    lines = adb_shell(serial, command, check=False).splitlines()
+    return [line.split(" ", 1)[1] for line in lines if " " in line]
+
+
+def saba_query_matches(serial, expected):
+    for url in latest_saba_urls(serial):
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        if expected.get("arrival_date") and query.get("arrival_date", [""])[0] != expected["arrival_date"]:
+            continue
+        if expected.get("departure_date") and query.get("departure_date", [""])[0] != expected["departure_date"]:
+            continue
+        if expected.get("destination") and expected["destination"].lower() not in unquote(url).lower():
+            continue
+        value = query.get(expected["param"], [""])[0]
+        haystack = unquote(value).lower()
+        raw_haystack = value.lower()
+        return any(token.lower() in haystack or token.lower() in raw_haystack for token in expected["contains_any"])
+    return False
 
 
 def init_task(serial, task):
     ensure_device(serial)
     adb_shell(serial, f"am force-stop {PACKAGE}", check=False)
     init = task.get("init", {})
+    if init.get("clear_saba_cache"):
+        adb_shell(serial, "rm -f /data/user/0/com.booking/cache/saba-http-cache/*", check=False)
     if "query" in init:
         set_query(serial, init["query"])
     if "prefs" in init:
@@ -258,6 +483,8 @@ def verify_task(serial, task):
     if "permissions" in verify:
         for permission, expected in verify["permissions"].items():
             checks[permission] = permission_granted(serial, permission) == expected
+    if "latest_saba_query" in verify:
+        checks["latest_saba_query"] = saba_query_matches(serial, verify["latest_saba_query"])
 
     reward = 0.0
     for name, ok in checks.items():
@@ -273,6 +500,11 @@ def main():
     parser.add_argument("--suite", default=str(SUITE_PATH))
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("list")
+    materialize_parser = sub.add_parser("materialize")
+    materialize_parser.add_argument("template_id")
+    materialize_parser.add_argument("--seed", type=int)
+    materialize_parser.add_argument("--id", dest="instance_id")
+    materialize_parser.add_argument("--init", action="store_true", help="Initialize the generated task immediately")
     init_parser = sub.add_parser("init")
     init_parser.add_argument("task_id")
     verify_parser = sub.add_parser("verify")
@@ -285,6 +517,17 @@ def main():
     if args.command == "list":
         for task in suite["tasks"]:
             print(f"{task['id']}\t{task['category']}\t{task['instruction']}")
+        for template in suite.get("task_templates", []):
+            print(f"{template['id']}\tTEMPLATE:{template['category']}\t{template['description']}")
+        return
+
+    if args.command == "materialize":
+        template = find_template(suite, args.template_id)
+        task = materialize_template(suite, template, seed=args.seed, instance_id=args.instance_id)
+        path = save_instance(task)
+        if args.init:
+            init_task(args.serial, task)
+        print(json.dumps({"task_id": task["id"], "path": str(path), "instruction": task["instruction"]}, ensure_ascii=False, indent=2))
         return
 
     task = find_task(suite, args.task_id)

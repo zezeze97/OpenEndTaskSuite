@@ -11,12 +11,93 @@
     "app_data_root": "/data/user/0/com.booking",
     "primary_files": [
       "shared_prefs/com.booking_preferences.xml",
-      "shared_prefs/gdpr_settings.xml"
+      "shared_prefs/gdpr_settings.xml",
+      "cache/saba-http-cache/*"
     ],
     "system_sources": [
       "dumpsys package com.booking runtime permissions"
     ]
   },
+  "task_templates": [
+    {
+      "id": "stay_search_random",
+      "category": "accommodation_search",
+      "description": "随机生成 Booking 住宿搜索任务，地点、入住/退房日期、成人数量、儿童年龄和房间数都会变化。",
+      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}。",
+      "parameters": {
+        "destinations": [
+          {"name": "Paris", "name_zh": "巴黎", "country_code": "fr", "id": -1456928, "type": "city"},
+          {"name": "Tokyo", "name_zh": "东京", "country_code": "jp", "id": -246227, "type": "city"},
+          {"name": "New York", "name_zh": "纽约", "country_code": "us", "id": 20088325, "type": "city"},
+          {"name": "London", "name_zh": "伦敦", "country_code": "gb", "id": -2601889, "type": "city"},
+          {"name": "Rome", "name_zh": "罗马", "country_code": "it", "id": -126693, "type": "city"},
+          {"name": "Bangkok", "name_zh": "曼谷", "country_code": "th", "id": -3414440, "type": "city"}
+        ],
+        "arrival_start": "2026-06-01",
+        "arrival_end": "2026-10-31",
+        "nights": [1, 2, 3, 4, 5],
+        "adult_count": [1, 2, 3, 4],
+        "room_count": [1, 2],
+        "children": {"count": [0, 1, 2], "age_min": 1, "age_max": 15}
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {"dates": 0.25, "destination": 0.25, "occupancy": 0.35, "rooms": 0.15}
+      }
+    },
+    {
+      "id": "stay_search_sort_random",
+      "category": "accommodation_search",
+      "description": "随机生成带排序要求的住宿搜索任务。",
+      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}，并把结果按{sort_zh}排序。",
+      "parameters": {
+        "inherits": "stay_search_random",
+        "sort_options": [
+          {"id": "price", "name": "price", "name_zh": "价格从低到高"},
+          {"id": "review_score", "name": "review_score", "name_zh": "住客评分"},
+          {"id": "distance", "name": "distance", "name_zh": "距离市中心"},
+          {"id": "class_descending", "name": "class_descending", "name_zh": "星级从高到低"}
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {"dates": 0.2, "destination": 0.2, "occupancy": 0.25, "rooms": 0.1, "sort": 0.25}
+      }
+    },
+    {
+      "id": "stay_search_business_random",
+      "category": "accommodation_search",
+      "description": "随机生成商务出行住宿搜索任务。",
+      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}，并把这次住宿标记为商务出行。",
+      "parameters": {
+        "inherits": "stay_search_random",
+        "travel_purpose": {"id": "business", "baseline": "not_selected"}
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {"dates": 0.2, "destination": 0.2, "occupancy": 0.25, "rooms": 0.1, "travel_purpose": 0.25}
+      }
+    },
+    {
+      "id": "stay_search_saba_filter_random",
+      "category": "accommodation_search",
+      "description": "随机生成带结果页筛选要求的住宿搜索任务；验证器读取最新 mobile.saba 请求参数。",
+      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}，并在结果页筛选出{filter_zh}。",
+      "parameters": {
+        "inherits": "stay_search_random",
+        "filters": [
+          {"id": "free_cancellation", "name_zh": "可免费取消的住宿", "saba_param": "categories_filter", "contains_any": ["free_cancellation", "fc%3D1", "fc=1"]},
+          {"id": "breakfast_included", "name_zh": "包含早餐的住宿", "saba_param": "categories_filter", "contains_any": ["breakfast", "mealplan", "mealplan%3D1", "mealplan=1"]},
+          {"id": "review_score_8", "name_zh": "评分 8 分以上的住宿", "saba_param": "categories_filter", "contains_any": ["review_score%3D80", "review_score=80", "review_score"]},
+          {"id": "hotels", "name_zh": "酒店类型的住宿", "saba_param": "categories_filter", "contains_any": ["ht_id%3D204", "ht_id=204", "hotel"]}
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {"dates": 0.15, "destination": 0.15, "occupancy": 0.2, "rooms": 0.1, "latest_saba_query": 0.4}
+      }
+    }
+  ],
   "tasks": [
     {
       "id": "stay_search_paris_family",

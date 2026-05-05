@@ -23,6 +23,19 @@
 python3 scripts/booking_taskctl.py list
 ```
 
+从随机模板生成一个可复现的任务实例：
+
+```bash
+python3 scripts/booking_taskctl.py materialize stay_search_sort_random --seed 42 --id run_sort_42
+```
+
+也可以省略 `--seed` 让系统随机生成；生成后的实例会保存到 `.task_state/`，后续用实例 id 初始化和验证：
+
+```bash
+python3 scripts/booking_taskctl.py init run_sort_42
+python3 scripts/booking_taskctl.py verify run_sort_42
+```
+
 初始化单个任务并启动 Booking：
 
 ```bash
@@ -50,6 +63,8 @@ python3 scripts/booking_taskctl.py --serial emulator-5554 verify set_currency_eu
 隐私类任务读取 `shared_prefs/gdpr_settings.xml` 里的 `marketing`、`functional`、`analytical`。
 
 权限类任务读取 Android package runtime permission 状态，必要时用 `pm grant`/`pm revoke` 初始化。
+
+随机住宿搜索模板会把目的地、日期、成人数、儿童年龄、房间数等参数采样成一个具体任务。扩展模板还支持排序、商务出行目的，以及通过最新 `cache/saba-http-cache` 中的 `mobile.saba` 请求参数验证结果页筛选项。
 
 ## 初始化原则
 
