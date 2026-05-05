@@ -1,19 +1,21 @@
-# OpenEndWorld Booking Task Suite
+# OpenEndWorld Android Task Suites
 
-这个仓库包含一套面向 `OpenEndWorld` 安卓模拟器中 Booking app（`com.booking`）的任务模板。模板会先随机生成一个具体任务实例，实例里的中文指令符合正常手机用户表达方式，并且每个实例都有可程序化的初始化和奖励验证。
+这个仓库包含面向 `OpenEndWorld` 安卓模拟器的可验证任务模板。模板会先随机生成一个具体任务实例，实例里的中文指令符合正常手机用户表达方式，并且每个实例都有可程序化的初始化和奖励验证。
 
 ## 已确认环境
 
 - AVD: `OpenEndWorld`
 - adb serial: 通常为 `emulator-5554`
-- Booking package: `com.booking`
-- 已观察版本: `64.6.0.1`
-- app 私有数据可通过 root adb 读取：`/data/user/0/com.booking`
+- Booking package: `com.booking`，已观察版本 `64.6.0.1`
+- 高德地图 package: `com.autonavi.minimap`，已观察版本 `16.13.7.2010`
+- app 私有数据可通过 root adb 读取，例如 `/data/user/0/com.booking` 和 `/data/user/0/com.autonavi.minimap`
 
 ## 文件
 
-- `suites/booking_app_tasks.json`: 模板定义、采样空间、初始化策略、验证断言、奖励权重。
-- `scripts/booking_taskctl.py`: 生成实例、初始化、验证和列出模板的命令行工具。
+- `suites/booking_app_tasks.json`: Booking 模板定义、采样空间、初始化策略、验证断言、奖励权重。
+- `scripts/booking_taskctl.py`: Booking 生成实例、初始化、验证和列出模板的命令行工具。
+- `suites/amap_app_tasks.json`: 高德地图模板定义、采样空间、初始化策略、验证断言、奖励权重。
+- `scripts/amap_taskctl.py`: 高德地图生成实例、初始化、验证和列出模板的命令行工具。
 
 ## 用法
 
@@ -54,6 +56,15 @@ python3 scripts/booking_taskctl.py verify run_sort_42
 python3 scripts/booking_taskctl.py --serial emulator-5554 verify run_sort_42
 ```
 
+高德地图任务同样使用 `list`、`materialize`、`init`、`verify`：
+
+```bash
+python3 scripts/amap_taskctl.py list
+python3 scripts/amap_taskctl.py materialize amap_saved_point_random --seed 7 --id amap_point_7
+python3 scripts/amap_taskctl.py init amap_point_7
+python3 scripts/amap_taskctl.py verify amap_point_7
+```
+
 ## 任务模板
 
 | 模板 ID | 类型 | 随机参数/任务变化 | 验证来源 | 示例指令 |
@@ -68,6 +79,19 @@ python3 scripts/booking_taskctl.py --serial emulator-5554 verify run_sort_42
 | `privacy_cookie_random` | 隐私/Cookie | Cookie 类别组合：关闭营销、关闭营销和分析、开启功能和分析但关闭营销、重新开启营销/功能/分析 | `gdpr_settings.xml` 里的 `marketing`、`functional`、`analytical` | 在 Booking 的隐私或 Cookie 设置里只保留必要/功能类 Cookie，关闭营销类和分析类 Cookie。 |
 | `booking_permission_random` | Android 权限 | 权限：通知、相机、当前位置、麦克风、日历；动作：关闭或允许 | Android runtime permission 状态 | 关闭 Booking app 的日历权限。 |
 
+## 高德地图任务模板
+
+| 模板 ID | 类型 | 随机参数/任务变化 | 验证来源 | 示例指令 |
+|---|---|---|---|---|
+| `amap_map_text_size_random` | 地图显示偏好 | 地图文字大小：小号、标准、大号；初始化为不同大小 | `MapTextSizeSet.xml` 里的 `map_text_size` | 把高德地图里的地图文字大小改成大号。 |
+| `amap_language_random` | App 语言偏好 | 语言选项：跟随系统、中文、英文；初始化为不同选项 | `appLanguage.xml` 里的 `language_switch_option` | 把高德地图的语言设置改成英文。 |
+| `amap_layer_toggle_random` | 地图图层 | 图层：景区手绘图、精品景区、水体环境、天气地图；动作：打开或关闭 | `SP_NAME_layer_checked.xml` 里对应图层 ID 的 boolean | 在高德地图的图层设置里打开天气地图图层。 |
+| `amap_push_setting_random` | App 内通知设置 | 消息推送：开启或关闭；初始化为相反状态 | `push_state.xml` 里的 `push_setting` | 在高德地图的设置里关闭消息推送。 |
+| `amap_permission_random` | Android 权限 | 权限：精确位置、相机、麦克风、通知；动作：允许或关闭 | Android runtime permission 状态 | 允许高德地图的精确位置权限。 |
+| `amap_saved_point_random` | 收藏地点 | 地点：北京南站、上海虹桥站、广州塔、西湖 | `aMap.db` 的 `SAVE_POINT` 表 | 在高德地图里搜索西湖，并把它收藏起来。 |
+| `amap_route_history_random` | 路线规划 | 起终点组合 + 路线方式：驾车、步行、公交 | `aMap.db` 的 `RouteHistory` 表 | 在高德地图里规划从上海虹桥站到外滩的驾车路线。 |
+| `amap_saved_route_random` | 保存路线 | 起终点组合 + 路线方式：驾车、步行 | `aMap.db` 的 `SAVE_ROUTE` 表 | 在高德地图里规划从广州塔到广州东站的步行路线，并把这条路线保存起来。 |
+
 ## 验证来源
 
 搜索类任务读取 `shared_prefs/com.booking_preferences.xml` 里的 `general_query` 和 `specific_query` JSON。
@@ -79,6 +103,8 @@ python3 scripts/booking_taskctl.py --serial emulator-5554 verify run_sort_42
 权限类任务读取 Android package runtime permission 状态，必要时用 `pm grant`/`pm revoke` 初始化。
 
 随机住宿搜索模板会把目的地、日期、成人数、儿童年龄、房间数等参数采样成一个具体任务。扩展模板还支持排序、商务出行目的，以及通过最新 `cache/saba-http-cache` 中的 `mobile.saba` 请求参数验证结果页筛选项。筛选项按类别分组采样，避免生成“四星 + 五星”或“酒店 + 公寓”这类互斥组合。
+
+高德地图设置类任务读取 `shared_prefs` 里的实际开关值；权限类任务读取 Android runtime permission；收藏和路线类任务读取 `databases/aMap.db` 里的 `SAVE_POINT`、`RouteHistory`、`SAVE_ROUTE` 表。初始化会清掉本 suite 前缀相关的测试记录或把开关设为目标的相反状态，但不会写入任务要求的完成状态。
 
 ## JSON 字段
 
