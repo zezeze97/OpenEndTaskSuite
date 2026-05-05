@@ -80,6 +80,98 @@ python3 scripts/booking_taskctl.py --serial emulator-5554 verify run_sort_42
 
 随机住宿搜索模板会把目的地、日期、成人数、儿童年龄、房间数等参数采样成一个具体任务。扩展模板还支持排序、商务出行目的，以及通过最新 `cache/saba-http-cache` 中的 `mobile.saba` 请求参数验证结果页筛选项。筛选项按类别分组采样，避免生成“四星 + 五星”或“酒店 + 公寓”这类互斥组合。
 
+## JSON 字段
+
+[`suites/booking_app_tasks.json`](suites/booking_app_tasks.json) 是整套任务的源定义。它不直接要求用户执行某个固定任务，而是定义“任务模板”，再由 `materialize` 命令采样成具体任务实例。
+
+顶层字段：
+
+| 字段 | 含义 |
+|---|---|
+| `suite_id` | 任务套件 ID，用来标识这套 Booking Android 任务定义。 |
+| `app` | 目标 app 和模拟器信息，包括 app 名称、包名、AVD 名称、已测试版本。 |
+| `verification_model` | 验证模型说明，列出奖励验证会读取哪些 Android/app 后台状态。 |
+| `task_templates` | 任务模板数组，是当前 suite 的主要内容。每个模板描述一种可随机生成的任务类型。 |
+| `tasks` | 固定任务数组。当前为空数组 `[]`，因为本套件已改为全模板化；具体任务会生成到 `.task_state/<task_id>.json`。 |
+
+`app` 字段：
+
+| 字段 | 含义 |
+|---|---|
+| `name` | app 显示名称。 |
+| `package` | Android 包名，当前为 `com.booking`。 |
+| `avd_name` | 目标模拟器名称，当前为 `OpenEndWorld`。 |
+| `tested_version` | 设计和验证时观察到的 Booking app 版本。 |
+
+`verification_model` 字段：
+
+| 字段 | 含义 |
+|---|---|
+| `principle` | 验证原则：不靠截图或 UI 文本，而是读取系统状态或 app 后台数据。 |
+| `app_data_root` | Booking 私有数据目录。 |
+| `primary_files` | 主要读取的 app 数据文件，例如 `com.booking_preferences.xml`、`gdpr_settings.xml`、`saba-http-cache`。 |
+| `system_sources` | 主要读取的 Android 系统状态，例如 `dumpsys package com.booking` 的 runtime permissions。 |
+
+每个 `task_templates[]` 元素：
+
+| 字段 | 含义 |
+|---|---|
+| `id` | 模板 ID，也是 `materialize` 命令使用的名字。 |
+| `category` | 模板类别，例如 `accommodation_search`、`preferences`、`privacy`、`android_permission`。 |
+| `description` | 模板的人类可读说明。 |
+| `instruction_template` | 中文指令模板。生成实例时会把 `{destination_zh}`、`{arrival_date}`、`{currency_code}` 等占位符替换成采样结果。 |
+| `parameters` | 采样空间和模板专有配置。不同模板的结构不同。 |
+| `reward` | 奖励配置，包括满分和各检查项权重。 |
+
+常见 `parameters` 子字段：
+
+| 字段 | 出现位置 | 含义 |
+|---|---|---|
+| `destinations` | 住宿搜索模板 | 可采样目的地列表。每个目的地包含英文名、中文名、国家码、Booking 城市 ID、类型。 |
+| `arrival_start` / `arrival_end` | 住宿搜索模板 | 入住日期采样范围。 |
+| `nights` | 住宿搜索模板 | 入住晚数候选。退房日期由入住日期 + 晚数得到。 |
+| `adult_count` | 住宿搜索模板 | 成人数量候选。 |
+| `room_count` | 住宿搜索模板 | 房间数量候选。 |
+| `children` | 住宿搜索模板 | 儿童数量候选和年龄范围。 |
+| `inherits` | 扩展搜索模板 | 继承基础搜索模板的采样空间，例如排序/筛选模板继承 `stay_search_random`。 |
+| `sort_options` | 排序/复杂搜索模板 | 可采样排序方式。 |
+| `travel_purpose` | 商务搜索模板 | 目标出行目的和初始化基线。 |
+| `filters` | 筛选/复杂搜索模板 | 可采样筛选项。每项包含中文名、SABA 参数名、可匹配 token、分组。 |
+| `filter_count` | 复杂搜索模板 | 一次任务要采样几个筛选项。 |
+| `include_sort_probability` | 复杂搜索模板 | 是否附加排序要求的概率。当前复杂模板设为 `1.0`。 |
+| `include_business_probability` | 复杂搜索模板 | 是否附加商务出行要求的概率。当前复杂模板设为 `1.0`。 |
+| `options` | 偏好/隐私/权限模板 | 可采样目标列表，例如币种、语言、Cookie 组合、Android 权限。 |
+
+筛选项字段：
+
+| 字段 | 含义 |
+|---|---|
+| `id` | 筛选项内部 ID。 |
+| `name_zh` | 中文描述，会写入用户指令。 |
+| `saba_param` | 预期出现在最新 `mobile.saba` 请求里的参数名，通常是 `categories_filter`。 |
+| `contains_any` | 验证时接受的 token 列表。命中任意一个即认为该筛选项通过。 |
+| `group` | 筛选互斥分组。复杂模板采样时同组最多选一个，避免生成互斥任务。 |
+
+`reward` 字段：
+
+| 字段 | 含义 |
+|---|---|
+| `max` | 该任务满分，当前通常为 `1.0`。 |
+| `weights` | 各检查项权重。搜索类常见检查项包括 `dates`、`destination`、`occupancy`、`rooms`、`sort`、`travel_purpose`、`latest_saba_query`。偏好类使用 `currency` / `locale`，隐私类使用 `marketing` / `functional` / `analytical`，权限类使用具体 permission 名称。 |
+
+生成后的任务实例字段：
+
+| 字段 | 含义 |
+|---|---|
+| `id` | 实例 ID，由 `--id` 指定或自动生成。 |
+| `template_id` | 来源模板 ID。 |
+| `seed` | 随机种子。相同模板和 seed 可复现同一组参数。 |
+| `instruction` | 最终给 agent/用户执行的中文任务指令。 |
+| `parameters` | 本次采样到的目标和初始化基线，方便调试。 |
+| `init` | 初始化策略。可能写入旧搜索 query、设置偏好基线、设置隐私基线、设置权限基线、清空 SABA 缓存。 |
+| `verify` | 验证断言。会被 `verify_task` 读取并转换成奖励检查。 |
+| `reward` | 从模板复制来的奖励配置。 |
+
 ## 初始化原则
 
 每个实例初始化到“明确未完成但用户可自然完成”的状态。例如让用户把货币改成 CAD 前，初始化会把 `currency` 设置为 `USD`；让用户做复杂住宿筛选前，初始化会放入另一组不同的搜索参数，并清空 SABA 搜索缓存，避免旧结果页请求污染验证。
