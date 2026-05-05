@@ -260,6 +260,67 @@ def materialize_template(suite, template, seed=None, instance_id=None):
     if seed is None:
         seed = random.SystemRandom().randint(1, 2**31 - 1)
     rng = random.Random(seed)
+    category = template["category"]
+    if instance_id is None:
+        instance_id = f"{template['id']}_{seed}"
+
+    if category == "preferences":
+        option = copy.deepcopy(rng.choice(template["parameters"]["options"]))
+        key = "currency" if "currency" in template["id"] else "locale"
+        instruction = template["instruction_template"].format(
+            currency_zh=option.get("name_zh", ""),
+            currency_code=option.get("code", ""),
+            language_zh=option.get("name_zh", ""),
+        )
+        return {
+            "id": instance_id,
+            "template_id": template["id"],
+            "seed": seed,
+            "instruction": instruction,
+            "category": category,
+            "parameters": {"target": option["code"], "baseline": option["baseline"]},
+            "init": {"prefs": {key: option["baseline"]}},
+            "verify": {"prefs": {key: option["code"]}},
+            "reward": copy.deepcopy(template["reward"]),
+        }
+
+    if category == "privacy":
+        option = copy.deepcopy(rng.choice(template["parameters"]["options"]))
+        return {
+            "id": instance_id,
+            "template_id": template["id"],
+            "seed": seed,
+            "instruction": template["instruction_template"].format(privacy_action_zh=option["action_zh"]),
+            "category": category,
+            "parameters": {"target": option["target"], "baseline": option["baseline"]},
+            "init": {"gdpr": option["baseline"]},
+            "verify": {"gdpr": option["target"]},
+            "reward": copy.deepcopy(template["reward"]),
+        }
+
+    if category == "android_permission":
+        option = copy.deepcopy(rng.choice(template["parameters"]["options"]))
+        permissions = [option["permission"]]
+        if option.get("paired_permission"):
+            permissions.append(option["paired_permission"])
+        init_permissions_map = {permission: option["baseline"] for permission in permissions}
+        verify_permissions = {permission: option["target"] for permission in permissions}
+        weight = round(1.0 / len(permissions), 4)
+        return {
+            "id": instance_id,
+            "template_id": template["id"],
+            "seed": seed,
+            "instruction": template["instruction_template"].format(
+                permission_action_zh=option["action_zh"],
+                permission_zh=option["name_zh"],
+            ),
+            "category": category,
+            "parameters": {"target": verify_permissions, "baseline": init_permissions_map},
+            "init": {"permissions": init_permissions_map},
+            "verify": {"permissions": verify_permissions},
+            "reward": {"max": 1.0, "weights": {permission: weight for permission in permissions}},
+        }
+
     target = sample_search_params(suite, template, rng)
     baseline = sample_search_params(suite, template, rng)
     attempts = 0
@@ -271,12 +332,32 @@ def materialize_template(suite, template, seed=None, instance_id=None):
     sort = None
     travel_purpose = None
     filter_option = None
+    filter_options = []
     if "sort_options" in params:
-        sort = copy.deepcopy(rng.choice(params["sort_options"]))
+        probability = params.get("include_sort_probability", 1.0)
+        if rng.random() <= probability:
+            sort = copy.deepcopy(rng.choice(params["sort_options"]))
     if "travel_purpose" in params:
         travel_purpose = params["travel_purpose"]["id"]
+    elif rng.random() <= params.get("include_business_probability", 0.0):
+        travel_purpose = "business"
     if "filters" in params:
-        filter_option = copy.deepcopy(rng.choice(params["filters"]))
+        if "filter_count" in params:
+            count = rng.choice(params["filter_count"])
+            shuffled = copy.deepcopy(params["filters"])
+            rng.shuffle(shuffled)
+            seen_groups = set()
+            for option in shuffled:
+                group = option.get("group", option["id"])
+                if group in seen_groups:
+                    continue
+                filter_options.append(option)
+                seen_groups.add(group)
+                if len(filter_options) >= count:
+                    break
+        else:
+            filter_option = copy.deepcopy(rng.choice(params["filters"]))
+            filter_options = [filter_option]
 
     instruction = template["instruction_template"].format(
         destination_zh=target["destination"]["name_zh"],
@@ -286,9 +367,10 @@ def materialize_template(suite, template, seed=None, instance_id=None):
         room_count_zh=f"{target['room_count']} 间房",
         sort_zh=sort["name_zh"] if sort else "",
         filter_zh=filter_option["name_zh"] if filter_option else "",
+        filters_zh="、".join(option["name_zh"] for option in filter_options),
+        sort_clause_zh=f"，并按{sort['name_zh']}排序" if sort else "",
+        business_clause_zh="，同时标记为商务出行" if travel_purpose == "business" else "",
     )
-    if instance_id is None:
-        instance_id = f"{template['id']}_{seed}"
 
     target_query = params_to_query(
         target,
@@ -324,16 +406,19 @@ def materialize_template(suite, template, seed=None, instance_id=None):
         "verify": {"query": verify_query},
         "reward": copy.deepcopy(template["reward"]),
     }
-    if filter_option:
+    if filter_options:
         task["init"]["clear_saba_cache"] = True
-        task["parameters"]["filter"] = filter_option["id"]
-        task["verify"]["latest_saba_query"] = {
-            "destination": target["destination"]["name"],
-            "arrival_date": target["arrival_date"],
-            "departure_date": target["departure_date"],
-            "param": filter_option["saba_param"],
-            "contains_any": filter_option["contains_any"],
-        }
+        task["parameters"]["filters"] = [option["id"] for option in filter_options]
+        task["verify"]["latest_saba_query"] = [
+            {
+                "destination": target["destination"]["name"],
+                "arrival_date": target["arrival_date"],
+                "departure_date": target["departure_date"],
+                "param": option["saba_param"],
+                "contains_any": option["contains_any"],
+            }
+            for option in filter_options
+        ]
     target_query.pop("sort", None)
     task["parameters"]["target_query_example"] = target_query
     return task
@@ -431,6 +516,8 @@ def latest_saba_urls(serial):
 
 
 def saba_query_matches(serial, expected):
+    if isinstance(expected, list):
+        return all(saba_query_matches(serial, item) for item in expected)
     for url in latest_saba_urls(serial):
         parsed = urlparse(url)
         query = parse_qs(parsed.query)
@@ -440,9 +527,9 @@ def saba_query_matches(serial, expected):
             continue
         if expected.get("destination") and expected["destination"].lower() not in unquote(url).lower():
             continue
-        value = query.get(expected["param"], [""])[0]
+        value = query.get(expected["param"], [""])[0] if expected.get("param") else ""
         haystack = unquote(value).lower()
-        raw_haystack = value.lower()
+        raw_haystack = (value + " " + url).lower()
         return any(token.lower() in haystack or token.lower() in raw_haystack for token in expected["contains_any"])
     return False
 

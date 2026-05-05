@@ -26,109 +26,76 @@
       "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}。",
       "parameters": {
         "destinations": [
-          {"name": "Paris", "name_zh": "巴黎", "country_code": "fr", "id": -1456928, "type": "city"},
-          {"name": "Tokyo", "name_zh": "东京", "country_code": "jp", "id": -246227, "type": "city"},
-          {"name": "New York", "name_zh": "纽约", "country_code": "us", "id": 20088325, "type": "city"},
-          {"name": "London", "name_zh": "伦敦", "country_code": "gb", "id": -2601889, "type": "city"},
-          {"name": "Rome", "name_zh": "罗马", "country_code": "it", "id": -126693, "type": "city"},
-          {"name": "Bangkok", "name_zh": "曼谷", "country_code": "th", "id": -3414440, "type": "city"}
+          {
+            "name": "Paris",
+            "name_zh": "巴黎",
+            "country_code": "fr",
+            "id": -1456928,
+            "type": "city"
+          },
+          {
+            "name": "Tokyo",
+            "name_zh": "东京",
+            "country_code": "jp",
+            "id": -246227,
+            "type": "city"
+          },
+          {
+            "name": "New York",
+            "name_zh": "纽约",
+            "country_code": "us",
+            "id": 20088325,
+            "type": "city"
+          },
+          {
+            "name": "London",
+            "name_zh": "伦敦",
+            "country_code": "gb",
+            "id": -2601889,
+            "type": "city"
+          },
+          {
+            "name": "Rome",
+            "name_zh": "罗马",
+            "country_code": "it",
+            "id": -126693,
+            "type": "city"
+          },
+          {
+            "name": "Bangkok",
+            "name_zh": "曼谷",
+            "country_code": "th",
+            "id": -3414440,
+            "type": "city"
+          }
         ],
         "arrival_start": "2026-06-01",
         "arrival_end": "2026-10-31",
-        "nights": [1, 2, 3, 4, 5],
-        "adult_count": [1, 2, 3, 4],
-        "room_count": [1, 2],
-        "children": {"count": [0, 1, 2], "age_min": 1, "age_max": 15}
-      },
-      "reward": {
-        "max": 1.0,
-        "weights": {"dates": 0.25, "destination": 0.25, "occupancy": 0.35, "rooms": 0.15}
-      }
-    },
-    {
-      "id": "stay_search_sort_random",
-      "category": "accommodation_search",
-      "description": "随机生成带排序要求的住宿搜索任务。",
-      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}，并把结果按{sort_zh}排序。",
-      "parameters": {
-        "inherits": "stay_search_random",
-        "sort_options": [
-          {"id": "price", "name": "price", "name_zh": "价格从低到高"},
-          {"id": "review_score", "name": "review_score", "name_zh": "住客评分"},
-          {"id": "distance", "name": "distance", "name_zh": "距离市中心"},
-          {"id": "class_descending", "name": "class_descending", "name_zh": "星级从高到低"}
-        ]
-      },
-      "reward": {
-        "max": 1.0,
-        "weights": {"dates": 0.2, "destination": 0.2, "occupancy": 0.25, "rooms": 0.1, "sort": 0.25}
-      }
-    },
-    {
-      "id": "stay_search_business_random",
-      "category": "accommodation_search",
-      "description": "随机生成商务出行住宿搜索任务。",
-      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}，并把这次住宿标记为商务出行。",
-      "parameters": {
-        "inherits": "stay_search_random",
-        "travel_purpose": {"id": "business", "baseline": "not_selected"}
-      },
-      "reward": {
-        "max": 1.0,
-        "weights": {"dates": 0.2, "destination": 0.2, "occupancy": 0.25, "rooms": 0.1, "travel_purpose": 0.25}
-      }
-    },
-    {
-      "id": "stay_search_saba_filter_random",
-      "category": "accommodation_search",
-      "description": "随机生成带结果页筛选要求的住宿搜索任务；验证器读取最新 mobile.saba 请求参数。",
-      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}，并在结果页筛选出{filter_zh}。",
-      "parameters": {
-        "inherits": "stay_search_random",
-        "filters": [
-          {"id": "free_cancellation", "name_zh": "可免费取消的住宿", "saba_param": "categories_filter", "contains_any": ["free_cancellation", "fc%3D1", "fc=1"]},
-          {"id": "breakfast_included", "name_zh": "包含早餐的住宿", "saba_param": "categories_filter", "contains_any": ["breakfast", "mealplan", "mealplan%3D1", "mealplan=1"]},
-          {"id": "review_score_8", "name_zh": "评分 8 分以上的住宿", "saba_param": "categories_filter", "contains_any": ["review_score%3D80", "review_score=80", "review_score"]},
-          {"id": "hotels", "name_zh": "酒店类型的住宿", "saba_param": "categories_filter", "contains_any": ["ht_id%3D204", "ht_id=204", "hotel"]}
-        ]
-      },
-      "reward": {
-        "max": 1.0,
-        "weights": {"dates": 0.15, "destination": 0.15, "occupancy": 0.2, "rooms": 0.1, "latest_saba_query": 0.4}
-      }
-    }
-  ],
-  "tasks": [
-    {
-      "id": "stay_search_paris_family",
-      "instruction": "在 Booking 里搜索巴黎的住宿，入住 2026-06-15，退房 2026-06-18，2 位成人、2 位儿童（8 岁和 12 岁），1 间房。",
-      "category": "accommodation_search",
-      "init": {
-        "query": {
-          "arrival_date": "2026-05-20",
-          "departure_date": "2026-05-21",
-          "location": {
-            "id": -2601889,
-            "city": "London",
-            "type": "city",
-            "name": "London",
-            "country_code": "gb"
-          },
-          "adult_count": 1,
-          "children_ages": [],
-          "room_count": 2,
-          "travel_purpose": "not_selected"
-        }
-      },
-      "verify": {
-        "query": {
-          "arrival_date": "2026-06-15",
-          "departure_date": "2026-06-18",
-          "location_contains": "Paris",
-          "country_code": "fr",
-          "adult_count": 2,
-          "children_ages": [8, 12],
-          "room_count": 1
+        "nights": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "adult_count": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "room_count": [
+          1,
+          2
+        ],
+        "children": {
+          "count": [
+            0,
+            1,
+            2
+          ],
+          "age_min": 1,
+          "age_max": 15
         }
       },
       "reward": {
@@ -142,102 +109,273 @@
       }
     },
     {
-      "id": "stay_search_tokyo_solo",
-      "instruction": "在 Booking 里查找东京的住宿，入住 2026-07-10，退房 2026-07-12，只住 1 位成人，1 间房。",
+      "id": "stay_search_sort_random",
       "category": "accommodation_search",
-      "init": {
-        "query": {
-          "arrival_date": "2026-06-01",
-          "departure_date": "2026-06-02",
-          "location": {
-            "id": -1456928,
-            "city": "Osaka",
-            "type": "city",
-            "name": "Osaka",
-            "country_code": "jp"
+      "description": "随机生成带排序要求的住宿搜索任务。",
+      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}，并把结果按{sort_zh}排序。",
+      "parameters": {
+        "inherits": "stay_search_random",
+        "sort_options": [
+          {
+            "id": "price",
+            "name": "price",
+            "name_zh": "价格从低到高"
           },
-          "adult_count": 2,
-          "children_ages": [],
-          "room_count": 2,
-          "travel_purpose": "not_selected"
-        }
+          {
+            "id": "review_score",
+            "name": "review_score",
+            "name_zh": "住客评分"
+          },
+          {
+            "id": "distance",
+            "name": "distance",
+            "name_zh": "距离市中心"
+          },
+          {
+            "id": "class_descending",
+            "name": "class_descending",
+            "name_zh": "星级从高到低"
+          }
+        ]
       },
-      "verify": {
-        "query": {
-          "arrival_date": "2026-07-10",
-          "departure_date": "2026-07-12",
-          "location_contains": "Tokyo",
-          "country_code": "jp",
-          "adult_count": 1,
-          "children_ages": [],
-          "room_count": 1
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "dates": 0.2,
+          "destination": 0.2,
+          "occupancy": 0.25,
+          "rooms": 0.1,
+          "sort": 0.25
+        }
+      }
+    },
+    {
+      "id": "stay_search_business_random",
+      "category": "accommodation_search",
+      "description": "随机生成商务出行住宿搜索任务。",
+      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}，并把这次住宿标记为商务出行。",
+      "parameters": {
+        "inherits": "stay_search_random",
+        "travel_purpose": {
+          "id": "business",
+          "baseline": "not_selected"
         }
       },
       "reward": {
         "max": 1.0,
         "weights": {
-          "dates": 0.3,
-          "destination": 0.3,
+          "dates": 0.2,
+          "destination": 0.2,
           "occupancy": 0.25,
-          "rooms": 0.15
+          "rooms": 0.1,
+          "travel_purpose": 0.25
         }
       }
     },
     {
-      "id": "stay_search_new_york_two_rooms",
-      "instruction": "在 Booking 里搜索纽约的住宿，入住 2026-08-05，退房 2026-08-09，4 位成人，分成 2 间房。",
+      "id": "stay_search_saba_filter_random",
       "category": "accommodation_search",
-      "init": {
-        "query": {
-          "arrival_date": "2026-07-01",
-          "departure_date": "2026-07-02",
-          "location": {
-            "id": -2601889,
-            "city": "London",
-            "type": "city",
-            "name": "London",
-            "country_code": "gb"
+      "description": "随机生成带单个结果页筛选要求的住宿搜索任务；验证器读取最新 mobile.saba 请求参数。",
+      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}，并在结果页筛选出{filter_zh}。",
+      "parameters": {
+        "inherits": "stay_search_random",
+        "filters": [
+          {
+            "id": "free_cancellation",
+            "name_zh": "可免费取消的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "free_cancellation",
+              "fc%3D1",
+              "fc=1",
+              "fc%3D2",
+              "fc=2"
+            ],
+            "group": "cancellation"
           },
-          "adult_count": 2,
-          "children_ages": [],
-          "room_count": 1,
-          "travel_purpose": "not_selected"
-        }
-      },
-      "verify": {
-        "query": {
-          "arrival_date": "2026-08-05",
-          "departure_date": "2026-08-09",
-          "location_contains": "New York",
-          "country_code": "us",
-          "adult_count": 4,
-          "children_ages": [],
-          "room_count": 2
-        }
+          {
+            "id": "breakfast_included",
+            "name_zh": "包含早餐的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "breakfast",
+              "mealplan",
+              "mealplan%3D1",
+              "mealplan=1"
+            ],
+            "group": "meal"
+          },
+          {
+            "id": "review_score_8",
+            "name_zh": "评分 8 分以上的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "review_score%3D80",
+              "review_score=80",
+              "review_score"
+            ],
+            "group": "review_score"
+          },
+          {
+            "id": "hotels",
+            "name_zh": "酒店类型的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "ht_id%3D204",
+              "ht_id=204",
+              "hotel"
+            ],
+            "group": "property_type"
+          },
+          {
+            "id": "apartments",
+            "name_zh": "公寓类型的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "ht_id%3D201",
+              "ht_id=201",
+              "apartment"
+            ],
+            "group": "property_type"
+          },
+          {
+            "id": "hostels",
+            "name_zh": "青旅/旅舍类型的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "ht_id%3D203",
+              "ht_id=203",
+              "hostel"
+            ],
+            "group": "property_type"
+          },
+          {
+            "id": "five_star",
+            "name_zh": "五星级住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "class%3D5",
+              "class=5",
+              "class%3D5.0",
+              "class=5.0"
+            ],
+            "group": "star_rating"
+          },
+          {
+            "id": "four_star",
+            "name_zh": "四星级住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "class%3D4",
+              "class=4",
+              "class%3D4.0",
+              "class=4.0"
+            ],
+            "group": "star_rating"
+          },
+          {
+            "id": "private_bathroom",
+            "name_zh": "带私人浴室的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "roomfacility%3D38",
+              "roomfacility=38",
+              "private_bathroom"
+            ],
+            "group": "room_facility"
+          },
+          {
+            "id": "parking",
+            "name_zh": "提供停车位的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "facility%3D2",
+              "facility=2",
+              "parking"
+            ],
+            "group": "property_facility"
+          },
+          {
+            "id": "wifi",
+            "name_zh": "提供无线网络的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "facility%3D107",
+              "facility=107",
+              "wifi",
+              "wi-fi"
+            ],
+            "group": "property_facility"
+          },
+          {
+            "id": "pool",
+            "name_zh": "有游泳池的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "facility%3D433",
+              "facility=433",
+              "pool"
+            ],
+            "group": "property_facility"
+          },
+          {
+            "id": "air_conditioning",
+            "name_zh": "有空调的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "roomfacility%3D11",
+              "roomfacility=11",
+              "air_conditioning",
+              "air conditioning"
+            ],
+            "group": "room_facility"
+          }
+        ]
       },
       "reward": {
         "max": 1.0,
         "weights": {
-          "dates": 0.25,
-          "destination": 0.3,
-          "occupancy": 0.25,
-          "rooms": 0.2
+          "dates": 0.15,
+          "destination": 0.15,
+          "occupancy": 0.2,
+          "rooms": 0.1,
+          "latest_saba_query": 0.4
         }
       }
     },
     {
-      "id": "set_currency_eur",
-      "instruction": "把 Booking 里的货币单位改成欧元 EUR。",
+      "id": "currency_random",
       "category": "preferences",
-      "init": {
-        "prefs": {
-          "currency": "USD"
-        }
-      },
-      "verify": {
-        "prefs": {
-          "currency": "EUR"
-        }
+      "description": "随机要求把 Booking 货币切换成指定币种。",
+      "instruction_template": "把 Booking 里的货币单位改成{currency_zh} {currency_code}。",
+      "parameters": {
+        "options": [
+          {
+            "code": "EUR",
+            "name_zh": "欧元",
+            "baseline": "USD"
+          },
+          {
+            "code": "JPY",
+            "name_zh": "日元",
+            "baseline": "USD"
+          },
+          {
+            "code": "GBP",
+            "name_zh": "英镑",
+            "baseline": "USD"
+          },
+          {
+            "code": "AUD",
+            "name_zh": "澳元",
+            "baseline": "USD"
+          },
+          {
+            "code": "CAD",
+            "name_zh": "加元",
+            "baseline": "USD"
+          }
+        ]
       },
       "reward": {
         "max": 1.0,
@@ -247,39 +385,38 @@
       }
     },
     {
-      "id": "set_currency_jpy",
-      "instruction": "把 Booking 里的货币单位改成日元 JPY。",
+      "id": "language_random",
       "category": "preferences",
-      "init": {
-        "prefs": {
-          "currency": "USD"
-        }
-      },
-      "verify": {
-        "prefs": {
-          "currency": "JPY"
-        }
-      },
-      "reward": {
-        "max": 1.0,
-        "weights": {
-          "currency": 1.0
-        }
-      }
-    },
-    {
-      "id": "set_language_spanish",
-      "instruction": "把 Booking app 的语言改成西班牙语。",
-      "category": "preferences",
-      "init": {
-        "prefs": {
-          "locale": "en"
-        }
-      },
-      "verify": {
-        "prefs": {
-          "locale": "es"
-        }
+      "description": "随机要求把 Booking app 语言切换成指定语言。",
+      "instruction_template": "把 Booking app 的语言改成{language_zh}。",
+      "parameters": {
+        "options": [
+          {
+            "code": "es",
+            "name_zh": "西班牙语",
+            "baseline": "en"
+          },
+          {
+            "code": "fr",
+            "name_zh": "法语",
+            "baseline": "en"
+          },
+          {
+            "code": "de",
+            "name_zh": "德语",
+            "baseline": "en"
+          },
+          {
+            "code": "it",
+            "name_zh": "意大利语",
+            "baseline": "en"
+          },
+          {
+            "code": "pt",
+            "name_zh": "葡萄牙语",
+            "baseline": "en"
+          }
+        ]
       },
       "reward": {
         "max": 1.0,
@@ -289,145 +426,324 @@
       }
     },
     {
-      "id": "set_language_french",
-      "instruction": "把 Booking app 的语言改成法语。",
-      "category": "preferences",
-      "init": {
-        "prefs": {
-          "locale": "en"
-        }
-      },
-      "verify": {
-        "prefs": {
-          "locale": "fr"
-        }
-      },
-      "reward": {
-        "max": 1.0,
-        "weights": {
-          "locale": 1.0
-        }
-      }
-    },
-    {
-      "id": "privacy_disable_marketing",
-      "instruction": "在 Booking 的隐私或 Cookie 设置里关闭营销类 Cookie，功能类和分析类保持开启。",
+      "id": "privacy_cookie_random",
       "category": "privacy",
-      "init": {
-        "gdpr": {
-          "marketing": 1,
-          "functional": 1,
-          "analytical": 1
-        }
-      },
-      "verify": {
-        "gdpr": {
-          "marketing": 0,
-          "functional": 1,
-          "analytical": 1
-        }
+      "description": "随机要求调整 Booking 隐私/Cookie 类别开关。",
+      "instruction_template": "在 Booking 的隐私或 Cookie 设置里{privacy_action_zh}。",
+      "parameters": {
+        "options": [
+          {
+            "action_zh": "关闭营销类 Cookie，功能类和分析类保持开启",
+            "target": {
+              "marketing": 0,
+              "functional": 1,
+              "analytical": 1
+            },
+            "baseline": {
+              "marketing": 1,
+              "functional": 1,
+              "analytical": 1
+            }
+          },
+          {
+            "action_zh": "只保留必要/功能类 Cookie，关闭营销类和分析类 Cookie",
+            "target": {
+              "marketing": 0,
+              "functional": 1,
+              "analytical": 0
+            },
+            "baseline": {
+              "marketing": 1,
+              "functional": 1,
+              "analytical": 1
+            }
+          },
+          {
+            "action_zh": "开启功能类和分析类 Cookie，但关闭营销类 Cookie",
+            "target": {
+              "marketing": 0,
+              "functional": 1,
+              "analytical": 1
+            },
+            "baseline": {
+              "marketing": 1,
+              "functional": 0,
+              "analytical": 0
+            }
+          },
+          {
+            "action_zh": "重新开启营销类、功能类和分析类 Cookie",
+            "target": {
+              "marketing": 1,
+              "functional": 1,
+              "analytical": 1
+            },
+            "baseline": {
+              "marketing": 0,
+              "functional": 1,
+              "analytical": 0
+            }
+          }
+        ]
       },
       "reward": {
         "max": 1.0,
         "weights": {
-          "marketing": 0.6,
-          "functional": 0.2,
-          "analytical": 0.2
+          "marketing": 0.34,
+          "functional": 0.33,
+          "analytical": 0.33
         }
       }
     },
     {
-      "id": "privacy_disable_nonessential",
-      "instruction": "在 Booking 的隐私或 Cookie 设置里只保留必要/功能类 Cookie，关闭营销类和分析类 Cookie。",
-      "category": "privacy",
-      "init": {
-        "gdpr": {
-          "marketing": 1,
-          "functional": 1,
-          "analytical": 1
-        }
-      },
-      "verify": {
-        "gdpr": {
-          "marketing": 0,
-          "functional": 1,
-          "analytical": 0
-        }
-      },
-      "reward": {
-        "max": 1.0,
-        "weights": {
-          "marketing": 0.35,
-          "functional": 0.3,
-          "analytical": 0.35
-        }
-      }
-    },
-    {
-      "id": "disable_booking_notifications",
-      "instruction": "关闭 Booking app 的通知权限。",
+      "id": "booking_permission_random",
       "category": "android_permission",
-      "init": {
-        "permissions": {
-          "android.permission.POST_NOTIFICATIONS": true
-        }
-      },
-      "verify": {
-        "permissions": {
-          "android.permission.POST_NOTIFICATIONS": false
-        }
+      "description": "随机要求在 Android 设置里允许或关闭 Booking 的某个权限。",
+      "instruction_template": "{permission_action_zh} Booking app 的{permission_zh}权限。",
+      "parameters": {
+        "options": [
+          {
+            "permission": "android.permission.POST_NOTIFICATIONS",
+            "name_zh": "通知",
+            "target": false,
+            "baseline": true,
+            "action_zh": "关闭"
+          },
+          {
+            "permission": "android.permission.CAMERA",
+            "name_zh": "相机",
+            "target": false,
+            "baseline": true,
+            "action_zh": "关闭"
+          },
+          {
+            "permission": "android.permission.ACCESS_FINE_LOCATION",
+            "paired_permission": "android.permission.ACCESS_COARSE_LOCATION",
+            "name_zh": "当前位置",
+            "target": true,
+            "baseline": false,
+            "action_zh": "允许"
+          },
+          {
+            "permission": "android.permission.RECORD_AUDIO",
+            "name_zh": "麦克风",
+            "target": false,
+            "baseline": true,
+            "action_zh": "关闭"
+          },
+          {
+            "permission": "android.permission.READ_CALENDAR",
+            "paired_permission": "android.permission.WRITE_CALENDAR",
+            "name_zh": "日历",
+            "target": false,
+            "baseline": true,
+            "action_zh": "关闭"
+          }
+        ]
       },
       "reward": {
         "max": 1.0,
         "weights": {
-          "android.permission.POST_NOTIFICATIONS": 1.0
+          "permission": 1.0
         }
       }
     },
     {
-      "id": "enable_booking_location",
-      "instruction": "允许 Booking app 使用当前位置。",
-      "category": "android_permission",
-      "init": {
-        "permissions": {
-          "android.permission.ACCESS_FINE_LOCATION": false,
-          "android.permission.ACCESS_COARSE_LOCATION": false
-        }
-      },
-      "verify": {
-        "permissions": {
-          "android.permission.ACCESS_FINE_LOCATION": true,
-          "android.permission.ACCESS_COARSE_LOCATION": true
-        }
+      "id": "stay_search_complex_filter_random",
+      "category": "accommodation_search",
+      "description": "随机生成多条件 Booking 搜索任务：基础搜索参数 + 2到3个结果页筛选项 + 可选排序 + 可选商务出行。",
+      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}，筛选出{filters_zh}{sort_clause_zh}{business_clause_zh}。",
+      "parameters": {
+        "inherits": "stay_search_random",
+        "filter_count": [
+          2,
+          3
+        ],
+        "filters": [
+          {
+            "id": "free_cancellation",
+            "name_zh": "可免费取消的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "free_cancellation",
+              "fc%3D1",
+              "fc=1",
+              "fc%3D2",
+              "fc=2"
+            ],
+            "group": "cancellation"
+          },
+          {
+            "id": "breakfast_included",
+            "name_zh": "包含早餐的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "breakfast",
+              "mealplan",
+              "mealplan%3D1",
+              "mealplan=1"
+            ],
+            "group": "meal"
+          },
+          {
+            "id": "review_score_8",
+            "name_zh": "评分 8 分以上的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "review_score%3D80",
+              "review_score=80",
+              "review_score"
+            ],
+            "group": "review_score"
+          },
+          {
+            "id": "hotels",
+            "name_zh": "酒店类型的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "ht_id%3D204",
+              "ht_id=204",
+              "hotel"
+            ],
+            "group": "property_type"
+          },
+          {
+            "id": "apartments",
+            "name_zh": "公寓类型的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "ht_id%3D201",
+              "ht_id=201",
+              "apartment"
+            ],
+            "group": "property_type"
+          },
+          {
+            "id": "hostels",
+            "name_zh": "青旅/旅舍类型的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "ht_id%3D203",
+              "ht_id=203",
+              "hostel"
+            ],
+            "group": "property_type"
+          },
+          {
+            "id": "five_star",
+            "name_zh": "五星级住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "class%3D5",
+              "class=5",
+              "class%3D5.0",
+              "class=5.0"
+            ],
+            "group": "star_rating"
+          },
+          {
+            "id": "four_star",
+            "name_zh": "四星级住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "class%3D4",
+              "class=4",
+              "class%3D4.0",
+              "class=4.0"
+            ],
+            "group": "star_rating"
+          },
+          {
+            "id": "private_bathroom",
+            "name_zh": "带私人浴室的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "roomfacility%3D38",
+              "roomfacility=38",
+              "private_bathroom"
+            ],
+            "group": "room_facility"
+          },
+          {
+            "id": "parking",
+            "name_zh": "提供停车位的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "facility%3D2",
+              "facility=2",
+              "parking"
+            ],
+            "group": "property_facility"
+          },
+          {
+            "id": "wifi",
+            "name_zh": "提供无线网络的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "facility%3D107",
+              "facility=107",
+              "wifi",
+              "wi-fi"
+            ],
+            "group": "property_facility"
+          },
+          {
+            "id": "pool",
+            "name_zh": "有游泳池的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "facility%3D433",
+              "facility=433",
+              "pool"
+            ],
+            "group": "property_facility"
+          },
+          {
+            "id": "air_conditioning",
+            "name_zh": "有空调的住宿",
+            "saba_param": "categories_filter",
+            "contains_any": [
+              "roomfacility%3D11",
+              "roomfacility=11",
+              "air_conditioning",
+              "air conditioning"
+            ],
+            "group": "room_facility"
+          }
+        ],
+        "sort_options": [
+          {
+            "id": "price",
+            "name": "price",
+            "name_zh": "价格从低到高"
+          },
+          {
+            "id": "review_score",
+            "name": "review_score",
+            "name_zh": "住客评分"
+          },
+          {
+            "id": "distance",
+            "name": "distance",
+            "name_zh": "距离市中心"
+          }
+        ],
+        "include_sort_probability": 1.0,
+        "include_business_probability": 1.0
       },
       "reward": {
         "max": 1.0,
         "weights": {
-          "android.permission.ACCESS_FINE_LOCATION": 0.6,
-          "android.permission.ACCESS_COARSE_LOCATION": 0.4
-        }
-      }
-    },
-    {
-      "id": "disable_booking_camera",
-      "instruction": "关闭 Booking app 的相机权限。",
-      "category": "android_permission",
-      "init": {
-        "permissions": {
-          "android.permission.CAMERA": true
-        }
-      },
-      "verify": {
-        "permissions": {
-          "android.permission.CAMERA": false
-        }
-      },
-      "reward": {
-        "max": 1.0,
-        "weights": {
-          "android.permission.CAMERA": 1.0
+          "dates": 0.12,
+          "destination": 0.12,
+          "occupancy": 0.16,
+          "rooms": 0.08,
+          "sort": 0.12,
+          "travel_purpose": 0.1,
+          "latest_saba_query": 0.3
         }
       }
     }
-  ]
+  ],
+  "tasks": []
 }
