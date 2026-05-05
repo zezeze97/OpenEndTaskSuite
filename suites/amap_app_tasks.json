@@ -14,6 +14,7 @@
       "shared_prefs/appLanguage.xml",
       "shared_prefs/SP_NAME_layer_checked.xml",
       "shared_prefs/push_state.xml",
+      "shared_prefs/user_route_method_info.xml",
       "databases/aMap.db"
     ],
     "system_sources": [
@@ -350,6 +351,229 @@
         "max": 1.0,
         "weights": {
           "saved_route": 1.0
+        }
+      }
+    },
+    {
+      "id": "amap_route_with_via_random",
+      "category": "route_planning",
+      "description": "随机生成带途经点的路线规划任务，验证 RouteHistory 表里的起点、终点和途经点。",
+      "instruction_template": "在高德地图里规划从{from_zh}到{to_zh}的{route_mode_zh}路线，并添加{via_zh}作为途经点。",
+      "parameters": {
+        "route_modes": [
+          {
+            "id": "driving",
+            "route_type": 1,
+            "route_mode_zh": "驾车"
+          },
+          {
+            "id": "walking",
+            "route_type": 2,
+            "route_mode_zh": "步行"
+          }
+        ],
+        "routes": [
+          {
+            "id": "bj_south_via_wangfujing_to_tiananmen",
+            "from": "北京南站",
+            "via": "王府井",
+            "to": "天安门"
+          },
+          {
+            "id": "sh_hongqiao_via_people_square_to_bund",
+            "from": "上海虹桥站",
+            "via": "人民广场",
+            "to": "外滩"
+          },
+          {
+            "id": "gz_tower_via_tiyu_west_to_east_station",
+            "from": "广州塔",
+            "via": "体育西路",
+            "to": "广州东站"
+          }
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "route_history": 0.75,
+          "via_point": 0.25
+        }
+      }
+    },
+    {
+      "id": "amap_start_navigation_random",
+      "category": "navigation",
+      "description": "随机生成开始导航任务，验证 NAVI_HISTORY 表里出现目标地点。",
+      "instruction_template": "在高德地图里搜索{poi_zh}，然后开始{route_mode_zh}导航。",
+      "parameters": {
+        "route_modes": [
+          {
+            "id": "driving",
+            "route_type": 1,
+            "route_mode_zh": "驾车"
+          },
+          {
+            "id": "walking",
+            "route_type": 2,
+            "route_mode_zh": "步行"
+          }
+        ],
+        "pois": [
+          {
+            "id": "tiananmen",
+            "name": "天安门"
+          },
+          {
+            "id": "the_bund",
+            "name": "外滩"
+          },
+          {
+            "id": "guangzhou_east_station",
+            "name": "广州东站"
+          },
+          {
+            "id": "hangzhou_east_station",
+            "name": "杭州东站"
+          }
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "navi_history": 1.0
+        }
+      }
+    },
+    {
+      "id": "amap_saved_route_with_via_random",
+      "category": "route_collection",
+      "description": "随机生成保存带途经点路线任务，验证 SAVE_ROUTE 表里的起点、终点和途经点。",
+      "instruction_template": "在高德地图里规划从{from_zh}到{to_zh}的驾车路线，途经{via_zh}，并把这条路线保存起来。",
+      "parameters": {
+        "route_modes": [
+          {
+            "id": "driving",
+            "route_type": 1,
+            "route_mode_zh": "驾车"
+          }
+        ],
+        "routes": [
+          {
+            "id": "bj_south_via_wangfujing_to_tiananmen",
+            "from": "北京南站",
+            "via": "王府井",
+            "to": "天安门"
+          },
+          {
+            "id": "sh_hongqiao_via_people_square_to_bund",
+            "from": "上海虹桥站",
+            "via": "人民广场",
+            "to": "外滩"
+          },
+          {
+            "id": "gz_tower_via_tiyu_west_to_east_station",
+            "from": "广州塔",
+            "via": "体育西路",
+            "to": "广州东站"
+          }
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "saved_route": 0.75,
+          "via_point": 0.25
+        }
+      }
+    },
+    {
+      "id": "amap_vehicle_add_random",
+      "category": "vehicle_navigation",
+      "description": "随机生成添加车牌任务，验证 VEHICLES_LOCAL 表。",
+      "instruction_template": "在高德地图的车辆设置里添加车牌{plate_num}，用于驾车导航和限行提醒。",
+      "parameters": {
+        "plates": [
+          {
+            "id": "jing_a_8x6p2",
+            "plate": "京A8X6P2"
+          },
+          {
+            "id": "hu_b_3k9m7",
+            "plate": "沪B3K9M7"
+          },
+          {
+            "id": "yue_a_5q2r8",
+            "plate": "粤A5Q2R8"
+          },
+          {
+            "id": "zhe_a_7n6d1",
+            "plate": "浙A7N6D1"
+          }
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "vehicle_plate": 1.0
+        }
+      }
+    },
+    {
+      "id": "amap_vehicle_default_random",
+      "category": "vehicle_navigation",
+      "description": "随机生成切换常用车辆任务；初始化会预置两辆车，但把目标车设为非常用。",
+      "instruction_template": "在高德地图的车辆设置里，把车牌{target_plate}设为常用车辆。",
+      "parameters": {
+        "pairs": [
+          {
+            "id": "beijing_pair",
+            "target_plate": "京A8X6P2",
+            "other_plate": "京C2D8F6"
+          },
+          {
+            "id": "shanghai_pair",
+            "target_plate": "沪B3K9M7",
+            "other_plate": "沪D6H1J5"
+          },
+          {
+            "id": "guangzhou_pair",
+            "target_plate": "粤A5Q2R8",
+            "other_plate": "粤B9L3T0"
+          }
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "target_vehicle_default": 0.75,
+          "other_vehicle_not_default": 0.25
+        }
+      }
+    },
+    {
+      "id": "amap_truck_route_guide_random",
+      "category": "vehicle_navigation",
+      "description": "随机生成货车路线引导开关任务，验证 user_route_method_info.xml。",
+      "instruction_template": "在高德地图路线规划设置里{action_zh}货车路线引导。",
+      "parameters": {
+        "options": [
+          {
+            "id": "enable",
+            "target": true,
+            "action_zh": "开启"
+          },
+          {
+            "id": "disable",
+            "target": false,
+            "action_zh": "关闭"
+          }
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "need_guide_truck": 1.0
         }
       }
     }

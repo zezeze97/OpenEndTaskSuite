@@ -20,6 +20,7 @@ TEXT_SIZE_PREF = f"{APP_ROOT}/shared_prefs/MapTextSizeSet.xml"
 LANGUAGE_PREF = f"{APP_ROOT}/shared_prefs/appLanguage.xml"
 LAYER_PREF = f"{APP_ROOT}/shared_prefs/SP_NAME_layer_checked.xml"
 PUSH_PREF = f"{APP_ROOT}/shared_prefs/push_state.xml"
+ROUTE_METHOD_PREF = f"{APP_ROOT}/shared_prefs/user_route_method_info.xml"
 AMAP_DB = f"{APP_ROOT}/databases/aMap.db"
 SUITE_PREFIX = "openend_amap_"
 
@@ -181,6 +182,8 @@ def delete_suite_db_rows(serial):
     sqlite_exec(serial, f"delete from SAVE_POINT where KEY like {prefix};")
     sqlite_exec(serial, f"delete from RouteHistory where ID like {prefix};")
     sqlite_exec(serial, f"delete from SAVE_ROUTE where KEY like {prefix};")
+    sqlite_exec(serial, f"delete from NAVI_HISTORY where KEY like {prefix};")
+    sqlite_exec(serial, f"delete from VEHICLES_LOCAL where UID like {prefix};")
 
 
 def permission_granted(serial, permission):
@@ -199,7 +202,7 @@ def set_permission(serial, permission, target):
 def sample_route_params(template, rng):
     route = dict(rng.choice(template["parameters"]["routes"]))
     mode = dict(rng.choice(template["parameters"]["route_modes"]))
-    return {
+    params = {
         "route_id": route["id"],
         "from": route["from"],
         "to": route["to"],
@@ -207,6 +210,47 @@ def sample_route_params(template, rng):
         "route_type": mode["route_type"],
         "route_mode_zh": mode["route_mode_zh"]
     }
+    if "via" in route:
+        params["via"] = route["via"]
+    return params
+
+
+def route_history_where(params, include_via=False):
+    parts = [
+        f"ROUTE_TYPE = {params['route_type']}",
+        f"(ROUTE_NAME like {sql_quote('%' + params['from'] + '%')} or FROM_POI_JSON like {sql_quote('%' + params['from'] + '%')})",
+        f"(ROUTE_NAME like {sql_quote('%' + params['to'] + '%')} or TO_POI_JSON like {sql_quote('%' + params['to'] + '%')})"
+    ]
+    if include_via:
+        parts.append(f"(ROUTE_NAME like {sql_quote('%' + params['via'] + '%')} or MID_POI_JSON like {sql_quote('%' + params['via'] + '%')})")
+    return " and ".join(parts)
+
+
+def saved_route_where(params, include_via=False):
+    parts = [
+        f"ROUTE_TYPE = {params['route_type']}",
+        f"(ROUTE_NAME like {sql_quote('%' + params['from'] + '%')} or FROM_POI_JSON like {sql_quote('%' + params['from'] + '%')})",
+        f"(ROUTE_NAME like {sql_quote('%' + params['to'] + '%')} or TO_POI_JSON like {sql_quote('%' + params['to'] + '%')})"
+    ]
+    if include_via:
+        parts.append(f"(ROUTE_NAME like {sql_quote('%' + params['via'] + '%')} or MID_POI_JSON like {sql_quote('%' + params['via'] + '%')})")
+    return " and ".join(parts)
+
+
+def route_pair_delete_where(params):
+    return (
+        f"(ROUTE_NAME like {sql_quote('%' + params['from'] + '%')} or FROM_POI_JSON like {sql_quote('%' + params['from'] + '%')}) and "
+        f"(ROUTE_NAME like {sql_quote('%' + params['to'] + '%')} or TO_POI_JSON like {sql_quote('%' + params['to'] + '%')})"
+    )
+
+
+def vehicle_insert_sql(plate, often_use):
+    uid = SUITE_PREFIX + "vehicle"
+    return (
+        "insert into VEHICLES_LOCAL "
+        "(UID, VEHICLE_PLATE_NUM, VEHICLE_BRAND_NAME, VEHICLE_OFTEN_USE, VEHICLE_VIOLATION_NUM, VEHICLE_CHECK_REMINDER, VEHICLE_VIOLATION_REMINDER, VEHICLE_LIMIT_REMINDER) "
+        f"values ({sql_quote(uid)}, {sql_quote(plate)}, {sql_quote('测试车辆')}, {1 if often_use else 0}, 0, 0, 0, 0);"
+    )
 
 
 def materialize_template(suite, template, seed=None, instance_id=None):
@@ -290,19 +334,12 @@ def materialize_template(suite, template, seed=None, instance_id=None):
                 "clear_db_rows": True,
                 "sqlite_delete": [{
                     "table": "RouteHistory",
-                    "where": (
-                        f"(ROUTE_NAME like {sql_quote('%' + params['from'] + '%')} or FROM_POI_JSON like {sql_quote('%' + params['from'] + '%')}) and "
-                        f"(ROUTE_NAME like {sql_quote('%' + params['to'] + '%')} or TO_POI_JSON like {sql_quote('%' + params['to'] + '%')})"
-                    )
+                    "where": route_pair_delete_where(params)
                 }]
             },
             "verify": {"sqlite_exists": [{
                 "table": "RouteHistory",
-                "where": (
-                    f"ROUTE_TYPE = {params['route_type']} and "
-                    f"(ROUTE_NAME like {sql_quote('%' + params['from'] + '%')} or FROM_POI_JSON like {sql_quote('%' + params['from'] + '%')}) and "
-                    f"(ROUTE_NAME like {sql_quote('%' + params['to'] + '%')} or TO_POI_JSON like {sql_quote('%' + params['to'] + '%')})"
-                ),
+                "where": route_history_where(params),
                 "weight": "route_history"
             }]}
         })
@@ -315,21 +352,149 @@ def materialize_template(suite, template, seed=None, instance_id=None):
                 "clear_db_rows": True,
                 "sqlite_delete": [{
                     "table": "SAVE_ROUTE",
-                    "where": (
-                        f"(ROUTE_NAME like {sql_quote('%' + params['from'] + '%')} or FROM_POI_JSON like {sql_quote('%' + params['from'] + '%')}) and "
-                        f"(ROUTE_NAME like {sql_quote('%' + params['to'] + '%')} or TO_POI_JSON like {sql_quote('%' + params['to'] + '%')})"
-                    )
+                    "where": route_pair_delete_where(params)
                 }]
             },
             "verify": {"sqlite_exists": [{
                 "table": "SAVE_ROUTE",
-                "where": (
-                    f"ROUTE_TYPE = {params['route_type']} and "
-                    f"(ROUTE_NAME like {sql_quote('%' + params['from'] + '%')} or FROM_POI_JSON like {sql_quote('%' + params['from'] + '%')}) and "
-                    f"(ROUTE_NAME like {sql_quote('%' + params['to'] + '%')} or TO_POI_JSON like {sql_quote('%' + params['to'] + '%')})"
-                ),
+                "where": saved_route_where(params),
                 "weight": "saved_route"
             }]}
+        })
+    elif template["id"] == "amap_route_with_via_random":
+        params = sample_route_params(template, rng)
+        task.update({
+            "instruction": template["instruction_template"].format(
+                from_zh=params["from"],
+                to_zh=params["to"],
+                via_zh=params["via"],
+                route_mode_zh=params["route_mode_zh"]
+            ),
+            "parameters": params,
+            "init": {
+                "clear_db_rows": True,
+                "sqlite_delete": [{
+                    "table": "RouteHistory",
+                    "where": route_pair_delete_where(params)
+                }]
+            },
+            "verify": {"sqlite_exists": [
+                {
+                    "table": "RouteHistory",
+                    "where": route_history_where(params),
+                    "weight": "route_history"
+                },
+                {
+                    "table": "RouteHistory",
+                    "where": route_history_where(params, include_via=True),
+                    "weight": "via_point"
+                }
+            ]}
+        })
+    elif template["id"] == "amap_start_navigation_random":
+        poi = dict(rng.choice(template["parameters"]["pois"]))
+        mode = dict(rng.choice(template["parameters"]["route_modes"]))
+        task.update({
+            "instruction": template["instruction_template"].format(poi_zh=poi["name"], route_mode_zh=mode["route_mode_zh"]),
+            "parameters": {
+                "poi_id": poi["id"],
+                "name": poi["name"],
+                "route_mode": mode["id"],
+                "route_type": mode["route_type"],
+                "route_mode_zh": mode["route_mode_zh"]
+            },
+            "init": {
+                "clear_db_rows": True,
+                "sqlite_delete": [{
+                    "table": "NAVI_HISTORY",
+                    "where": f"POI_JSON like {sql_quote('%' + poi['name'] + '%')}"
+                }]
+            },
+            "verify": {"sqlite_exists": [{
+                "table": "NAVI_HISTORY",
+                "where": f"POI_JSON like {sql_quote('%' + poi['name'] + '%')}",
+                "weight": "navi_history"
+            }]}
+        })
+    elif template["id"] == "amap_saved_route_with_via_random":
+        params = sample_route_params(template, rng)
+        task.update({
+            "instruction": template["instruction_template"].format(from_zh=params["from"], to_zh=params["to"], via_zh=params["via"]),
+            "parameters": params,
+            "init": {
+                "clear_db_rows": True,
+                "sqlite_delete": [{
+                    "table": "SAVE_ROUTE",
+                    "where": route_pair_delete_where(params)
+                }]
+            },
+            "verify": {"sqlite_exists": [
+                {
+                    "table": "SAVE_ROUTE",
+                    "where": saved_route_where(params),
+                    "weight": "saved_route"
+                },
+                {
+                    "table": "SAVE_ROUTE",
+                    "where": saved_route_where(params, include_via=True),
+                    "weight": "via_point"
+                }
+            ]}
+        })
+    elif template["id"] == "amap_vehicle_add_random":
+        plate = dict(rng.choice(template["parameters"]["plates"]))
+        task.update({
+            "instruction": template["instruction_template"].format(plate_num=plate["plate"]),
+            "parameters": plate,
+            "init": {
+                "clear_db_rows": True,
+                "sqlite_delete": [{
+                    "table": "VEHICLES_LOCAL",
+                    "where": f"VEHICLE_PLATE_NUM = {sql_quote(plate['plate'])}"
+                }]
+            },
+            "verify": {"sqlite_exists": [{
+                "table": "VEHICLES_LOCAL",
+                "where": f"VEHICLE_PLATE_NUM = {sql_quote(plate['plate'])}",
+                "weight": "vehicle_plate"
+            }]}
+        })
+    elif template["id"] == "amap_vehicle_default_random":
+        pair = dict(rng.choice(template["parameters"]["pairs"]))
+        task.update({
+            "instruction": template["instruction_template"].format(target_plate=pair["target_plate"]),
+            "parameters": pair,
+            "init": {
+                "clear_db_rows": True,
+                "sqlite_delete": [{
+                    "table": "VEHICLES_LOCAL",
+                    "where": f"VEHICLE_PLATE_NUM in ({sql_quote(pair['target_plate'])}, {sql_quote(pair['other_plate'])})"
+                }],
+                "sqlite_exec": [
+                    vehicle_insert_sql(pair["target_plate"], False),
+                    vehicle_insert_sql(pair["other_plate"], True)
+                ]
+            },
+            "verify": {"sqlite_exists": [
+                {
+                    "table": "VEHICLES_LOCAL",
+                    "where": f"VEHICLE_PLATE_NUM = {sql_quote(pair['target_plate'])} and VEHICLE_OFTEN_USE = 1",
+                    "weight": "target_vehicle_default"
+                },
+                {
+                    "table": "VEHICLES_LOCAL",
+                    "where": f"VEHICLE_PLATE_NUM = {sql_quote(pair['other_plate'])} and ifnull(VEHICLE_OFTEN_USE, 0) = 0",
+                    "weight": "other_vehicle_not_default"
+                }
+            ]}
+        })
+    elif template["id"] == "amap_truck_route_guide_random":
+        option = dict(rng.choice(template["parameters"]["options"]))
+        task.update({
+            "instruction": template["instruction_template"].format(action_zh=option["action_zh"]),
+            "parameters": option,
+            "init": {"prefs": [{"path": ROUTE_METHOD_PREF, "values": {"need_guide_truck": not option["target"]}}]},
+            "verify": {"prefs": [{"path": ROUTE_METHOD_PREF, "key": "need_guide_truck", "equals": option["target"], "weight": "need_guide_truck"}]}
         })
     else:
         raise SystemExit(f"Template materializer is not implemented: {template['id']}")
@@ -352,6 +517,8 @@ def init_task(serial, task):
         delete_suite_db_rows(serial)
     for delete in init.get("sqlite_delete", []):
         sqlite_exec(serial, f"delete from {delete['table']} where {delete['where']};")
+    for sql in init.get("sqlite_exec", []):
+        sqlite_exec(serial, sql)
     for pref in init.get("prefs", []):
         update_xml_values(serial, pref["path"], pref["values"])
     for perm in init.get("permissions", []):
