@@ -8,7 +8,8 @@
 - adb serial: 通常为 `emulator-5554`
 - Booking package: `com.booking`，已观察版本 `64.6.0.1`
 - 高德地图 package: `com.autonavi.minimap`，已观察版本 `16.13.7.2010`
-- app 私有数据可通过 root adb 读取，例如 `/data/user/0/com.booking` 和 `/data/user/0/com.autonavi.minimap`
+- QQ音乐 package: `com.tencent.qqmusic`，已观察版本 `14.4.0.8`
+- app 私有数据可通过 root adb 读取，例如 `/data/user/0/com.booking`、`/data/user/0/com.autonavi.minimap` 和 `/data/user/0/com.tencent.qqmusic`
 
 ## 文件
 
@@ -16,6 +17,8 @@
 - `scripts/booking_taskctl.py`: Booking 生成实例、初始化、验证和列出模板的命令行工具。
 - `suites/amap_app_tasks.json`: 高德地图模板定义、采样空间、初始化策略、验证断言、奖励权重。
 - `scripts/amap_taskctl.py`: 高德地图生成实例、初始化、验证和列出模板的命令行工具。
+- `suites/qqmusic_app_tasks.json`: QQ音乐模板定义、采样空间、初始化策略、验证断言、奖励权重。
+- `scripts/qqmusic_taskctl.py`: QQ音乐生成实例、初始化、验证和列出模板的命令行工具。
 
 ## 用法
 
@@ -67,6 +70,15 @@ python3 scripts/amap_taskctl.py init amap_point_7
 python3 scripts/amap_taskctl.py verify amap_point_7
 ```
 
+QQ音乐任务也使用同样的命令形态：
+
+```bash
+python3 scripts/qqmusic_taskctl.py list
+python3 scripts/qqmusic_taskctl.py materialize qqmusic_play_song_random --seed 9 --id qqmusic_play_9
+python3 scripts/qqmusic_taskctl.py init qqmusic_play_9
+python3 scripts/qqmusic_taskctl.py verify qqmusic_play_9
+```
+
 ## 任务模板
 
 | 模板 ID | 类型 | 随机参数/任务变化 | 验证来源 | 示例指令 |
@@ -100,6 +112,18 @@ python3 scripts/amap_taskctl.py verify amap_point_7
 | `amap_vehicle_default_random` | 常用车辆切换 | 初始化预置两辆车，目标车初始非常用；任务要求切换常用车辆 | `aMap.db` 的 `VEHICLES_LOCAL` 表 | 在高德地图的车辆设置里，把车牌粤A5Q2R8设为常用车辆。 |
 | `amap_truck_route_guide_random` | 货车路线引导 | 开启或关闭货车路线引导 | `user_route_method_info.xml` 里的 `need_guide_truck` | 在高德地图路线规划设置里开启货车路线引导。 |
 
+## QQ音乐任务模板
+
+| 模板 ID | 类型 | 随机参数/任务变化 | 验证来源 | 示例指令 |
+|---|---|---|---|---|
+| `qqmusic_play_song_random` | 播放歌曲 | 歌曲：开始懂了、唯一、多远都要在一起、红玫瑰、突然好想你、爱你 | `QQMusic` 数据库的 `PlaySongHistoryTable` 表 | 在 QQ音乐里播放《红玫瑰》这首歌。 |
+| `qqmusic_like_song_random` | 曲库收藏 | 歌曲采样后加入“我喜欢” | `QQMusic` 数据库的 `User_Folder_Song_table` 表，目标 folderid 为 `201` | 在 QQ音乐里把《唯一》加入“我喜欢”。 |
+| `qqmusic_download_song_random` | 下载歌曲 | 歌曲采样后下载 | `QQMusic` 数据库的 `download_song_table` 或 `downloads` 表 | 在 QQ音乐里下载《爱你》这首歌。 |
+| `qqmusic_play_mode_random` | 播放设置 | 播放模式：列表循环、随机播放、单曲循环 | `qqmusicplayer.xml` 里的 `playmode` | 把 QQ音乐的播放模式切换成随机播放。 |
+| `qqmusic_video_autoplay_random` | 视频播放设置 | 视频自动播放：仅 Wi-Fi、始终、不自动播放 | `FILE_KEY_VIDEO_AUTO_PLAY_SETTING.xml` 里的 `KEY_VIDEO_AUTO_PLAY_SETTING` | 把 QQ音乐的视频自动播放设置改成不自动播放。 |
+| `qqmusic_sound_effect_random` | 音效设置 | 音效：关闭音效、Super Sound 音效 | `SuperSound.xml` 里的 `EffectTypeSetting` | 把 QQ音乐的音效切换成关闭音效。 |
+| `qqmusic_permission_random` | Android 权限 | 权限：通知、麦克风、相机、音乐和音频；动作：允许或关闭 | Android runtime permission 状态 | 允许 QQ音乐的麦克风权限。 |
+
 ## 验证来源
 
 搜索类任务读取 `shared_prefs/com.booking_preferences.xml` 里的 `general_query` 和 `specific_query` JSON。
@@ -113,6 +137,8 @@ python3 scripts/amap_taskctl.py verify amap_point_7
 随机住宿搜索模板会把目的地、日期、成人数、儿童年龄、房间数等参数采样成一个具体任务。扩展模板还支持排序、商务出行目的，以及通过最新 `cache/saba-http-cache` 中的 `mobile.saba` 请求参数验证结果页筛选项。筛选项按类别分组采样，避免生成“四星 + 五星”或“酒店 + 公寓”这类互斥组合。
 
 高德地图设置类任务读取 `shared_prefs` 里的实际开关值；权限类任务读取 Android runtime permission；收藏、路线、导航和车辆类任务读取 `databases/aMap.db` 里的 `SAVE_POINT`、`RouteHistory`、`SAVE_ROUTE`、`NAVI_HISTORY`、`VEHICLES_LOCAL` 表。初始化会清掉目标相关测试记录、预置未完成的车辆状态，或把开关设为目标的相反状态，但不会写入任务要求的完成状态。
+
+QQ音乐播放和曲库类任务读取 `databases/QQMusic` 里的 `PlaySongHistoryTable`、`User_Folder_Song_table`、`download_song_table`、`downloads` 表；设置类任务读取 `qqmusicplayer.xml`、`FILE_KEY_VIDEO_AUTO_PLAY_SETTING.xml`、`SuperSound.xml`；权限类任务读取 Android runtime permission。初始化会清掉目标歌曲相关记录或把设置设为目标的相反状态，不写入任务要求的完成状态。
 
 ## JSON 字段
 

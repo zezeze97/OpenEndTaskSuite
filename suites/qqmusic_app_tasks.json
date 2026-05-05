@@ -1,0 +1,315 @@
+{
+  "suite_id": "qqmusic_android_openendworld_v1",
+  "app": {
+    "name": "QQ音乐",
+    "package": "com.tencent.qqmusic",
+    "avd_name": "OpenEndWorld",
+    "tested_version": "14.4.0.8"
+  },
+  "verification_model": {
+    "principle": "Rewards are computed from Android runtime permission state and QQ音乐 private app data. The evaluator does not inspect screenshots or UI text.",
+    "app_data_root": "/data/user/0/com.tencent.qqmusic",
+    "primary_files": [
+      "shared_prefs/qqmusicplayer.xml",
+      "shared_prefs/FILE_KEY_VIDEO_AUTO_PLAY_SETTING.xml",
+      "shared_prefs/SuperSound.xml",
+      "databases/QQMusic"
+    ],
+    "system_sources": [
+      "dumpsys package com.tencent.qqmusic runtime permissions"
+    ]
+  },
+  "task_templates": [
+    {
+      "id": "qqmusic_play_song_random",
+      "category": "playback",
+      "description": "随机生成播放指定歌曲的任务，验证播放历史表。",
+      "instruction_template": "在 QQ音乐里播放《{song_name}》这首歌。",
+      "parameters": {
+        "songs": [
+          {
+            "id": 5646,
+            "type": 2,
+            "song_name": "开始懂了",
+            "singer": "孙燕姿"
+          },
+          {
+            "id": 291692590,
+            "type": 2,
+            "song_name": "唯一",
+            "singer": "告五人"
+          },
+          {
+            "id": 102174489,
+            "type": 2,
+            "song_name": "多远都要在一起",
+            "singer": "G.E.M. 邓紫棋"
+          },
+          {
+            "id": 1313990,
+            "type": 2,
+            "song_name": "红玫瑰",
+            "singer": "陈奕迅"
+          },
+          {
+            "id": 447807,
+            "type": 2,
+            "song_name": "突然好想你",
+            "singer": "五月天"
+          },
+          {
+            "id": 95306,
+            "type": 2,
+            "song_name": "爱你",
+            "singer": "王心凌"
+          }
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "play_history": 1.0
+        }
+      }
+    },
+    {
+      "id": "qqmusic_like_song_random",
+      "category": "library",
+      "description": "随机生成把指定歌曲加入我喜欢的任务，验证 User_Folder_Song_table。",
+      "instruction_template": "在 QQ音乐里把《{song_name}》加入“我喜欢”。",
+      "parameters": {
+        "songs": [
+          {
+            "id": 5646,
+            "type": 2,
+            "song_name": "开始懂了",
+            "singer": "孙燕姿"
+          },
+          {
+            "id": 291692590,
+            "type": 2,
+            "song_name": "唯一",
+            "singer": "告五人"
+          },
+          {
+            "id": 102174489,
+            "type": 2,
+            "song_name": "多远都要在一起",
+            "singer": "G.E.M. 邓紫棋"
+          },
+          {
+            "id": 1313990,
+            "type": 2,
+            "song_name": "红玫瑰",
+            "singer": "陈奕迅"
+          },
+          {
+            "id": 447807,
+            "type": 2,
+            "song_name": "突然好想你",
+            "singer": "五月天"
+          }
+        ],
+        "favorite_folder": {
+          "folderid": 201,
+          "uin": "-9",
+          "foldername": "我喜欢"
+        }
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "liked_song": 1.0
+        }
+      }
+    },
+    {
+      "id": "qqmusic_download_song_random",
+      "category": "download",
+      "description": "随机生成下载指定歌曲的任务，验证下载表。",
+      "instruction_template": "在 QQ音乐里下载《{song_name}》这首歌。",
+      "parameters": {
+        "songs": [
+          {
+            "id": 5646,
+            "type": 2,
+            "song_name": "开始懂了",
+            "singer": "孙燕姿"
+          },
+          {
+            "id": 291692590,
+            "type": 2,
+            "song_name": "唯一",
+            "singer": "告五人"
+          },
+          {
+            "id": 102174489,
+            "type": 2,
+            "song_name": "多远都要在一起",
+            "singer": "G.E.M. 邓紫棋"
+          },
+          {
+            "id": 95306,
+            "type": 2,
+            "song_name": "爱你",
+            "singer": "王心凌"
+          }
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "download_record": 1.0
+        }
+      }
+    },
+    {
+      "id": "qqmusic_play_mode_random",
+      "category": "playback_setting",
+      "description": "随机生成播放模式切换任务，验证 qqmusicplayer.xml。",
+      "instruction_template": "把 QQ音乐的播放模式切换成{mode_zh}。",
+      "parameters": {
+        "options": [
+          {
+            "id": "list_loop",
+            "target": 103,
+            "mode_zh": "列表循环",
+            "baseline": 102
+          },
+          {
+            "id": "shuffle",
+            "target": 102,
+            "mode_zh": "随机播放",
+            "baseline": 103
+          },
+          {
+            "id": "single_loop",
+            "target": 101,
+            "mode_zh": "单曲循环",
+            "baseline": 103
+          }
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "playmode": 1.0
+        }
+      }
+    },
+    {
+      "id": "qqmusic_video_autoplay_random",
+      "category": "playback_setting",
+      "description": "随机生成视频自动播放设置任务，验证 FILE_KEY_VIDEO_AUTO_PLAY_SETTING.xml。",
+      "instruction_template": "把 QQ音乐的视频自动播放设置改成{target_zh}。",
+      "parameters": {
+        "options": [
+          {
+            "id": "wifi_only",
+            "target": 2,
+            "target_zh": "仅 Wi-Fi 下自动播放",
+            "baseline": 3
+          },
+          {
+            "id": "always",
+            "target": 3,
+            "target_zh": "始终自动播放",
+            "baseline": 1
+          },
+          {
+            "id": "never",
+            "target": 1,
+            "target_zh": "不自动播放",
+            "baseline": 3
+          }
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "video_autoplay": 1.0
+        }
+      }
+    },
+    {
+      "id": "qqmusic_sound_effect_random",
+      "category": "playback_setting",
+      "description": "随机生成音效设置任务，验证 SuperSound.xml。",
+      "instruction_template": "把 QQ音乐的音效切换成{effect_zh}。",
+      "parameters": {
+        "options": [
+          {
+            "id": "off",
+            "target": -1,
+            "effect_zh": "关闭音效",
+            "baseline": 996
+          },
+          {
+            "id": "super_sound",
+            "target": 996,
+            "effect_zh": "Super Sound 音效",
+            "baseline": -1
+          }
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "sound_effect": 1.0
+        }
+      }
+    },
+    {
+      "id": "qqmusic_permission_random",
+      "category": "android_permission",
+      "description": "随机生成 Android 系统权限开关任务。",
+      "instruction_template": "{action_zh} QQ音乐的{permission_zh}权限。",
+      "parameters": {
+        "options": [
+          {
+            "id": "notification_allow",
+            "permission": "android.permission.POST_NOTIFICATIONS",
+            "permission_zh": "通知",
+            "target": true,
+            "action_zh": "允许"
+          },
+          {
+            "id": "notification_deny",
+            "permission": "android.permission.POST_NOTIFICATIONS",
+            "permission_zh": "通知",
+            "target": false,
+            "action_zh": "关闭"
+          },
+          {
+            "id": "microphone_allow",
+            "permission": "android.permission.RECORD_AUDIO",
+            "permission_zh": "麦克风",
+            "target": true,
+            "action_zh": "允许"
+          },
+          {
+            "id": "camera_deny",
+            "permission": "android.permission.CAMERA",
+            "permission_zh": "相机",
+            "target": false,
+            "action_zh": "关闭"
+          },
+          {
+            "id": "audio_files_allow",
+            "permission": "android.permission.READ_MEDIA_AUDIO",
+            "permission_zh": "音乐和音频",
+            "target": true,
+            "action_zh": "允许"
+          }
+        ]
+      },
+      "reward": {
+        "max": 1.0,
+        "weights": {
+          "runtime_permission": 1.0
+        }
+      }
+    }
+  ],
+  "tasks": []
+}
