@@ -17,6 +17,7 @@ STATE_DIR = ROOT / ".task_state"
 PACKAGE = "com.tencent.qqmusic"
 APP_ROOT = f"/data/user/0/{PACKAGE}"
 PLAYER_PREF = f"{APP_ROOT}/shared_prefs/qqmusicplayer.xml"
+QQMUSIC_PREF = f"{APP_ROOT}/shared_prefs/qqmusic.xml"
 VIDEO_PREF = f"{APP_ROOT}/shared_prefs/FILE_KEY_VIDEO_AUTO_PLAY_SETTING.xml"
 SOUND_PREF = f"{APP_ROOT}/shared_prefs/SuperSound.xml"
 QQMUSIC_DB = f"{APP_ROOT}/databases/QQMusic"
@@ -223,6 +224,19 @@ def clear_runtime_environment(serial):
     adb_shell(serial, "input keyevent HOME", check=False)
 
 
+def clear_playback_resume_state(serial):
+    sqlite_exec(serial, "delete from PlaySongHistoryTable;")
+    sqlite_exec(serial, "delete from Progress_Song_Table;")
+    update_xml_values(serial, QQMUSIC_PREF, {
+        "searchHistoryNew": "[]",
+        "KEY_SEARCH_PLAY_ALBUM_URL": "",
+        "KEY_PLAY_INFO_STATICS_FROM": ""
+    })
+    adb_shell(serial, f"rm -f {APP_ROOT}/obj/KEY_NEXT_PLAY_LIST*.obj", check=False)
+    adb_shell(serial, f"rm -f {APP_ROOT}/cache/temp_statistics_data_player", check=False)
+    adb_shell(serial, f"rm -f {APP_ROOT}/cache/temp_statistics_privacy_player", check=False)
+
+
 def song_params(template, rng):
     return dict(rng.choice(template["parameters"]["songs"]))
 
@@ -347,6 +361,8 @@ def init_task(serial, task):
     init = task.get("init", {})
     for delete in init.get("sqlite_delete", []):
         sqlite_exec(serial, f"delete from {delete['table']} where {delete['where']};")
+    if task.get("template_id") == "qqmusic_play_song_random":
+        clear_playback_resume_state(serial)
     for pref in init.get("prefs", []):
         update_xml_values(serial, pref["path"], pref["values"])
     for perm in init.get("permissions", []):

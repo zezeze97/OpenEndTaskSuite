@@ -138,7 +138,7 @@ python3 scripts/qqmusic_taskctl.py verify qqmusic_play_9
 
 高德地图设置类任务读取 `shared_prefs` 里的实际开关值；权限类任务读取 Android runtime permission；收藏、路线、导航和车辆类任务读取 `databases/aMap.db` 里的 `SAVE_POINT`、`RouteHistory`、`SAVE_ROUTE`、`NAVI_HISTORY`、`VEHICLES_LOCAL` 表。初始化会清掉目标相关测试记录、预置未完成的车辆状态，或把开关设为目标的相反状态，但不会写入任务要求的完成状态。
 
-QQ音乐播放和曲库类任务读取 `databases/QQMusic` 里的 `PlaySongHistoryTable`、`User_Folder_Song_table`、`download_song_table`、`downloads` 表；播放歌曲任务还会读取 Android `dumpsys media_session` 作为当前播放元数据兜底；设置类任务读取 `qqmusicplayer.xml`、`FILE_KEY_VIDEO_AUTO_PLAY_SETTING.xml`、`SuperSound.xml`；权限类任务读取 Android runtime permission。初始化会清掉目标歌曲相关记录或把设置设为目标的相反状态，不写入任务要求的完成状态。
+QQ音乐播放和曲库类任务读取 `databases/QQMusic` 里的 `PlaySongHistoryTable`、`User_Folder_Song_table`、`download_song_table`、`downloads` 表；播放歌曲任务还会读取 Android `dumpsys media_session` 作为当前播放元数据兜底；设置类任务读取 `qqmusicplayer.xml`、`FILE_KEY_VIDEO_AUTO_PLAY_SETTING.xml`、`SuperSound.xml`；权限类任务读取 Android runtime permission。播放歌曲任务初始化会额外清掉播放历史、播放进度、搜索历史和下一首播放队列，避免 app 重新打开时自动恢复到目标歌曲；其他初始化会清掉目标歌曲相关记录或把设置设为目标的相反状态，不写入任务要求的完成状态。
 
 ## JSON 字段
 
