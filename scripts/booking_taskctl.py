@@ -555,7 +555,7 @@ def init_task(serial, task):
         update_xml_values(serial, GDPR_PATH, init["gdpr"])
     if "permissions" in init:
         init_permissions(serial, init["permissions"])
-    adb_shell(serial, f"monkey -p {PACKAGE} -c android.intent.category.LAUNCHER 1 >/dev/null")
+    clear_runtime_environment(serial)
 
 
 def verify_task(serial, task):

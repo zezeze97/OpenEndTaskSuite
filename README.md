@@ -41,13 +41,13 @@ python3 scripts/booking_taskctl.py init run_sort_42
 python3 scripts/booking_taskctl.py verify run_sort_42
 ```
 
-初始化单个任务并启动 Booking：
+初始化单个任务：
 
 ```bash
 python3 scripts/booking_taskctl.py init run_sort_42
 ```
 
-每次 `init` 都会先做运行环境清理：回到 Home、强制停止目标 app、执行一次系统后台清理，再回到 Home。之后才写入该任务的初始化状态并启动目标 app。
+每次 `init` 会先停止目标 app，写入该任务的初始化状态；完成后再次回到 Home、强制停止目标 app，并执行系统后台清理。也就是说，agent 真正开始执行任务前会停在桌面，目标 app 不会被预先打开。
 
 验证并输出奖励：
 
@@ -234,4 +234,4 @@ QQ音乐播放和曲库类任务读取 `databases/QQMusic` 里的 `PlaySongHisto
 
 ## 初始化原则
 
-每个实例初始化到“明确未完成但用户可自然完成”的状态，并在写入任务初始化数据前先回到 Home、强制停止目标 app、清理后台、再回到 Home。例如让用户把货币改成 CAD 前，初始化会把 `currency` 设置为 `USD`；让用户做复杂住宿筛选前，初始化会放入另一组不同的搜索参数，并清空 SABA 搜索缓存，避免旧结果页请求污染验证。
+每个实例初始化到“明确未完成但用户可自然完成”的状态。初始化流程会先停止目标 app 以便安全写入状态；写入完成后，再回到 Home、强制停止目标 app、清理后台，保证 agent 接手时从桌面开始。例如让用户把货币改成 CAD 前，初始化会把 `currency` 设置为 `USD`；让用户做复杂住宿筛选前，初始化会放入另一组不同的搜索参数，并清空 SABA 搜索缓存，避免旧结果页请求污染验证。

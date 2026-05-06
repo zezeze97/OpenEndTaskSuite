@@ -530,7 +530,7 @@ def init_task(serial, task):
         update_xml_values(serial, pref["path"], pref["values"])
     for perm in init.get("permissions", []):
         set_permission(serial, perm["permission"], perm["granted"])
-    adb_shell(serial, f"monkey -p {PACKAGE} -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1", check=False)
+    clear_runtime_environment(serial)
     time.sleep(1)
 
 
