@@ -21,14 +21,23 @@ VIDEO_PREF = f"{APP_ROOT}/shared_prefs/FILE_KEY_VIDEO_AUTO_PLAY_SETTING.xml"
 SOUND_PREF = f"{APP_ROOT}/shared_prefs/SuperSound.xml"
 QQMUSIC_DB = f"{APP_ROOT}/databases/QQMusic"
 SUITE_PREFIX = "openend_qqmusic_"
+ADB_TIMEOUT_SECONDS = 30
+ADB_ROOT_TIMEOUT_SECONDS = 10
+ADB_PROBE_TIMEOUT_SECONDS = 5
 
 
-def adb(serial, *args, check=True, text=True):
+def adb(serial, *args, check=True, text=True, timeout=ADB_TIMEOUT_SECONDS):
     cmd = ["adb"]
     if serial:
         cmd += ["-s", serial]
     cmd += list(args)
-    proc = subprocess.run(cmd, check=False, text=text, capture_output=True)
+    try:
+        proc = subprocess.run(cmd, check=False, text=text, capture_output=True, timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"Command timed out after {timeout}s: {' '.join(cmd)}\n"
+            "adb may be wedged; try `adb kill-server && adb start-server`, then rerun the task."
+        ) from exc
     if check and proc.returncode != 0:
         raise RuntimeError(
             f"Command failed: {' '.join(cmd)}\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
@@ -36,8 +45,8 @@ def adb(serial, *args, check=True, text=True):
     return proc.stdout
 
 
-def adb_shell(serial, command, check=True):
-    return adb(serial, "shell", command, check=check)
+def adb_shell(serial, command, check=True, timeout=ADB_TIMEOUT_SECONDS):
+    return adb(serial, "shell", command, check=check, timeout=timeout)
 
 
 def load_suite():
@@ -62,7 +71,16 @@ def find_task(suite, task_id):
 
 
 def ensure_device(serial):
-    adb(serial, "root")
+    state = adb(serial, "get-state", timeout=ADB_PROBE_TIMEOUT_SECONDS).strip()
+    if state != "device":
+        raise RuntimeError(f"adb device is not ready: {state or 'unknown'}")
+    identity = adb_shell(serial, "id", check=False, timeout=ADB_PROBE_TIMEOUT_SECONDS)
+    if "uid=0" not in identity:
+        adb(serial, "root", check=False, timeout=ADB_ROOT_TIMEOUT_SECONDS)
+        adb(serial, "wait-for-device", timeout=ADB_TIMEOUT_SECONDS)
+        identity = adb_shell(serial, "id", check=False, timeout=ADB_PROBE_TIMEOUT_SECONDS)
+    if "uid=0" not in identity:
+        raise RuntimeError("adb shell is not root; app private data cannot be initialized or verified.")
     adb_shell(serial, f"pm path {PACKAGE}")
 
 
@@ -429,4 +447,7 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    try:
+        main(sys.argv[1:])
+    except RuntimeError as exc:
+        raise SystemExit(f"ERROR: {exc}")
