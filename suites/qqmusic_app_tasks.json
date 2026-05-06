@@ -13,7 +13,8 @@
       "shared_prefs/qqmusicplayer.xml",
       "shared_prefs/FILE_KEY_VIDEO_AUTO_PLAY_SETTING.xml",
       "shared_prefs/SuperSound.xml",
-      "databases/QQMusic"
+      "databases/QQMusic",
+      "dumpsys media_session"
     ],
     "system_sources": [
       "dumpsys package com.tencent.qqmusic runtime permissions"
@@ -23,7 +24,7 @@
     {
       "id": "qqmusic_play_song_random",
       "category": "playback",
-      "description": "随机生成播放指定歌曲的任务，验证播放历史表。",
+      "description": "随机生成播放指定歌曲的任务，验证播放历史表或 Android 媒体会话里的当前播放元数据。",
       "instruction_template": "在 QQ音乐里播放《{song_name}》这首歌。",
       "parameters": {
         "songs": [

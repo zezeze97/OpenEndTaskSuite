@@ -116,7 +116,7 @@ python3 scripts/qqmusic_taskctl.py verify qqmusic_play_9
 
 | 模板 ID | 类型 | 随机参数/任务变化 | 验证来源 | 示例指令 |
 |---|---|---|---|---|
-| `qqmusic_play_song_random` | 播放歌曲 | 歌曲：开始懂了、唯一、多远都要在一起、红玫瑰、突然好想你、爱你 | `QQMusic` 数据库的 `PlaySongHistoryTable` 表 | 在 QQ音乐里播放《红玫瑰》这首歌。 |
+| `qqmusic_play_song_random` | 播放歌曲 | 歌曲：开始懂了、唯一、多远都要在一起、红玫瑰、突然好想你、爱你 | `QQMusic` 数据库的 `PlaySongHistoryTable` 表，或 Android `dumpsys media_session` 当前播放元数据 | 在 QQ音乐里播放《红玫瑰》这首歌。 |
 | `qqmusic_like_song_random` | 曲库收藏 | 歌曲采样后加入“我喜欢” | `QQMusic` 数据库的 `User_Folder_Song_table` 表，目标 folderid 为 `201` | 在 QQ音乐里把《唯一》加入“我喜欢”。 |
 | `qqmusic_download_song_random` | 下载歌曲 | 歌曲采样后下载 | `QQMusic` 数据库的 `download_song_table` 或 `downloads` 表 | 在 QQ音乐里下载《爱你》这首歌。 |
 | `qqmusic_play_mode_random` | 播放设置 | 播放模式：列表循环、随机播放、单曲循环 | `qqmusicplayer.xml` 里的 `playmode` | 把 QQ音乐的播放模式切换成随机播放。 |
@@ -138,7 +138,7 @@ python3 scripts/qqmusic_taskctl.py verify qqmusic_play_9
 
 高德地图设置类任务读取 `shared_prefs` 里的实际开关值；权限类任务读取 Android runtime permission；收藏、路线、导航和车辆类任务读取 `databases/aMap.db` 里的 `SAVE_POINT`、`RouteHistory`、`SAVE_ROUTE`、`NAVI_HISTORY`、`VEHICLES_LOCAL` 表。初始化会清掉目标相关测试记录、预置未完成的车辆状态，或把开关设为目标的相反状态，但不会写入任务要求的完成状态。
 
-QQ音乐播放和曲库类任务读取 `databases/QQMusic` 里的 `PlaySongHistoryTable`、`User_Folder_Song_table`、`download_song_table`、`downloads` 表；设置类任务读取 `qqmusicplayer.xml`、`FILE_KEY_VIDEO_AUTO_PLAY_SETTING.xml`、`SuperSound.xml`；权限类任务读取 Android runtime permission。初始化会清掉目标歌曲相关记录或把设置设为目标的相反状态，不写入任务要求的完成状态。
+QQ音乐播放和曲库类任务读取 `databases/QQMusic` 里的 `PlaySongHistoryTable`、`User_Folder_Song_table`、`download_song_table`、`downloads` 表；播放歌曲任务还会读取 Android `dumpsys media_session` 作为当前播放元数据兜底；设置类任务读取 `qqmusicplayer.xml`、`FILE_KEY_VIDEO_AUTO_PLAY_SETTING.xml`、`SuperSound.xml`；权限类任务读取 Android runtime permission。初始化会清掉目标歌曲相关记录或把设置设为目标的相反状态，不写入任务要求的完成状态。
 
 ## JSON 字段
 

@@ -201,6 +201,16 @@ def permission_granted(serial, permission):
     return False
 
 
+def media_session_matches(serial, title, artist=None):
+    output = adb_shell(serial, "dumpsys media_session", check=False, timeout=ADB_TIMEOUT_SECONDS)
+    haystack = output.lower()
+    if PACKAGE not in haystack:
+        return False
+    title_ok = title.lower() in haystack
+    artist_ok = not artist or artist.lower() in haystack
+    return title_ok and artist_ok
+
+
 def set_permission(serial, permission, target):
     action = "grant" if target else "revoke"
     adb_shell(serial, f"pm {action} {PACKAGE} {permission}", check=False)
@@ -242,7 +252,11 @@ def materialize_template(suite, template, seed=None, instance_id=None):
                 "table": "PlaySongHistoryTable",
                 "where": f"songId = {song['id']}",
                 "weight": "play_history"
-            }]}
+            }], "media_session": [{
+                "title": song["song_name"],
+                "artist": song["singer"],
+                "weight": "play_history"
+            }], "match_any": True}
         })
     elif template["id"] == "qqmusic_like_song_random":
         song = song_params(template, rng)
@@ -345,8 +359,19 @@ def verify_task(serial, task):
     ensure_device(serial)
     weights = task.get("reward", {}).get("weights", {})
     checks = []
+    verify = task.get("verify", {})
 
-    for pref in task.get("verify", {}).get("prefs", []):
+    if task.get("template_id") == "qqmusic_play_song_random" and "media_session" not in verify:
+        params = task.get("parameters", {})
+        verify = dict(verify)
+        verify["media_session"] = [{
+            "title": params.get("song_name", ""),
+            "artist": params.get("singer", ""),
+            "weight": "play_history"
+        }]
+        verify["match_any"] = True
+
+    for pref in verify.get("prefs", []):
         actual = pref_value(serial, pref["path"], pref["key"])
         checks.append({
             "name": pref["weight"],
@@ -356,7 +381,7 @@ def verify_task(serial, task):
             "weight": weights.get(pref["weight"], 0)
         })
 
-    for perm in task.get("verify", {}).get("permissions", []):
+    for perm in verify.get("permissions", []):
         actual = permission_granted(serial, perm["permission"])
         checks.append({
             "name": perm["weight"],
@@ -367,7 +392,7 @@ def verify_task(serial, task):
         })
 
     sqlite_checks = []
-    for exists in task.get("verify", {}).get("sqlite_exists", []):
+    for exists in verify.get("sqlite_exists", []):
         raw = sqlite_scalar(serial, f"select count(*) from {exists['table']} where {exists['where']};")
         try:
             count = int(raw.splitlines()[-1] or "0")
@@ -380,18 +405,35 @@ def verify_task(serial, task):
             "actual": count,
             "weight": weights.get(exists["weight"], 0)
         })
-    if task.get("verify", {}).get("match_any") and sqlite_checks:
-        passed = any(item["passed"] for item in sqlite_checks)
-        weight_name = sqlite_checks[0]["name"]
+
+    media_checks = []
+    for media in verify.get("media_session", []):
+        passed = media_session_matches(serial, media["title"], media.get("artist"))
+        media_checks.append({
+            "name": media["weight"],
+            "passed": passed,
+            "expected": {
+                "title": media["title"],
+                "artist": media.get("artist")
+            },
+            "actual": "matched" if passed else "not matched",
+            "weight": weights.get(media["weight"], 0)
+        })
+
+    any_checks = sqlite_checks + media_checks
+    if verify.get("match_any") and any_checks:
+        passed = any(item["passed"] for item in any_checks)
+        weight_name = any_checks[0]["name"]
         checks.append({
             "name": weight_name,
             "passed": passed,
-            "expected": "any count > 0",
-            "actual": [item["actual"] for item in sqlite_checks],
+            "expected": "any verifier passed",
+            "actual": [item["actual"] for item in any_checks],
             "weight": weights.get(weight_name, 0)
         })
     else:
         checks.extend(sqlite_checks)
+        checks.extend(media_checks)
 
     score = sum(item["weight"] for item in checks if item["passed"])
     return {
