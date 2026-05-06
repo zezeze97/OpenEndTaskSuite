@@ -108,6 +108,8 @@ python3 scripts/qqmusic_taskctl.py verify qqmusic_play_9
 | `amap_route_with_via_random` | 带途经点路线规划 | 起点、终点、途经点组合 + 路线方式：驾车、步行 | `aMap.db` 的 `RouteHistory` 表 | 在高德地图里规划从上海虹桥站到外滩的驾车路线，并添加人民广场作为途经点。 |
 | `amap_start_navigation_random` | 开始导航 | 目的地：天安门、外滩、广州东站、杭州东站；方式：驾车、步行 | `aMap.db` 的 `NAVI_HISTORY` 表 | 在高德地图里搜索天安门，然后开始驾车导航。 |
 | `amap_saved_route_with_via_random` | 保存带途经点路线 | 起点、终点、途经点组合；驾车路线 | `aMap.db` 的 `SAVE_ROUTE` 表 | 在高德地图里规划从广州塔到广州东站的驾车路线，途经体育西路，并把这条路线保存起来。 |
+| `amap_vehicle_add_random` | 导航车辆设置 | 车牌：京/沪/粤/浙样例车牌 | `aMap.db` 的 `VEHICLES_LOCAL` 表 | 在高德地图里找到车辆或车牌相关入口，添加车牌沪B3K9M7，用于驾车导航和限行提醒。 |
+| `amap_vehicle_default_random` | 常用车辆切换 | 初始化预置两辆车，目标车初始非常用；任务要求切换常用车辆 | `aMap.db` 的 `VEHICLES_LOCAL` 表 | 在高德地图里找到车辆或车牌相关入口，把车牌粤A5Q2R8设为常用车辆。 |
 | `amap_truck_route_guide_random` | 货车路线引导 | 开启或关闭货车路线引导 | `user_route_method_info.xml` 里的 `need_guide_truck` | 在高德地图路线规划设置里开启货车路线引导。 |
 
 ## QQ音乐任务模板
@@ -134,7 +136,7 @@ python3 scripts/qqmusic_taskctl.py verify qqmusic_play_9
 
 随机住宿搜索模板会把目的地、日期、成人数、儿童年龄、房间数等参数采样成一个具体任务。扩展模板还支持排序、商务出行目的，以及通过最新 `cache/saba-http-cache` 中的 `mobile.saba` 请求参数验证结果页筛选项。筛选项按类别分组采样，避免生成“四星 + 五星”或“酒店 + 公寓”这类互斥组合。
 
-高德地图设置类任务读取 `shared_prefs` 里的实际开关值；权限类任务读取 Android runtime permission；收藏、路线和导航类任务读取 `databases/aMap.db` 里的 `SAVE_POINT`、`RouteHistory`、`SAVE_ROUTE`、`NAVI_HISTORY` 表。初始化会清掉目标相关测试记录，或把开关设为目标的相反状态，但不会写入任务要求的完成状态。
+高德地图设置类任务读取 `shared_prefs` 里的实际开关值；权限类任务读取 Android runtime permission；收藏、路线、导航和车辆类任务读取 `databases/aMap.db` 里的 `SAVE_POINT`、`RouteHistory`、`SAVE_ROUTE`、`NAVI_HISTORY`、`VEHICLES_LOCAL` 表。初始化会清掉目标相关测试记录、预置未完成的车辆状态，或把开关设为目标的相反状态，但不会写入任务要求的完成状态。
 
 QQ音乐播放和曲库类任务读取 `databases/QQMusic` 里的 `PlaySongHistoryTable`、`User_Folder_Song_table`、`download_song_table`、`downloads` 表；播放歌曲任务还会读取 Android `dumpsys media_session` 作为当前播放元数据兜底；设置类任务读取 `qqmusicplayer.xml`、`FILE_KEY_VIDEO_AUTO_PLAY_SETTING.xml`、`SuperSound.xml`；权限类任务读取 Android runtime permission。播放歌曲任务初始化会额外清掉播放历史、播放进度、搜索历史和下一首播放队列，避免 app 重新打开时自动恢复到目标歌曲；其他初始化会清掉目标歌曲相关记录或把设置设为目标的相反状态，不写入任务要求的完成状态。
 

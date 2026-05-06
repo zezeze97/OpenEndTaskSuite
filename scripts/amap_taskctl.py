@@ -201,6 +201,7 @@ def delete_suite_db_rows(serial):
     sqlite_exec(serial, f"delete from RouteHistory where ID like {prefix};")
     sqlite_exec(serial, f"delete from SAVE_ROUTE where KEY like {prefix};")
     sqlite_exec(serial, f"delete from NAVI_HISTORY where KEY like {prefix};")
+    sqlite_exec(serial, f"delete from VEHICLES_LOCAL where UID like {prefix};")
 
 
 def permission_granted(serial, permission):
@@ -265,6 +266,15 @@ def route_pair_delete_where(params):
     return (
         f"(ROUTE_NAME like {sql_quote('%' + params['from'] + '%')} or FROM_POI_JSON like {sql_quote('%' + params['from'] + '%')}) and "
         f"(ROUTE_NAME like {sql_quote('%' + params['to'] + '%')} or TO_POI_JSON like {sql_quote('%' + params['to'] + '%')})"
+    )
+
+
+def vehicle_insert_sql(plate, often_use):
+    uid = SUITE_PREFIX + "vehicle"
+    return (
+        "insert into VEHICLES_LOCAL "
+        "(UID, VEHICLE_PLATE_NUM, VEHICLE_BRAND_NAME, VEHICLE_OFTEN_USE, VEHICLE_VIOLATION_NUM, VEHICLE_CHECK_REMINDER, VEHICLE_VIOLATION_REMINDER, VEHICLE_LIMIT_REMINDER) "
+        f"values ({sql_quote(uid)}, {sql_quote(plate)}, {sql_quote('测试车辆')}, {1 if often_use else 0}, 0, 0, 0, 0);"
     )
 
 
@@ -453,6 +463,53 @@ def materialize_template(suite, template, seed=None, instance_id=None):
                     "table": "SAVE_ROUTE",
                     "where": saved_route_where(params, include_via=True),
                     "weight": "via_point"
+                }
+            ]}
+        })
+    elif template["id"] == "amap_vehicle_add_random":
+        plate = dict(rng.choice(template["parameters"]["plates"]))
+        task.update({
+            "instruction": template["instruction_template"].format(plate_num=plate["plate"]),
+            "parameters": plate,
+            "init": {
+                "clear_db_rows": True,
+                "sqlite_delete": [{
+                    "table": "VEHICLES_LOCAL",
+                    "where": f"VEHICLE_PLATE_NUM = {sql_quote(plate['plate'])}"
+                }]
+            },
+            "verify": {"sqlite_exists": [{
+                "table": "VEHICLES_LOCAL",
+                "where": f"VEHICLE_PLATE_NUM = {sql_quote(plate['plate'])}",
+                "weight": "vehicle_plate"
+            }]}
+        })
+    elif template["id"] == "amap_vehicle_default_random":
+        pair = dict(rng.choice(template["parameters"]["pairs"]))
+        task.update({
+            "instruction": template["instruction_template"].format(target_plate=pair["target_plate"]),
+            "parameters": pair,
+            "init": {
+                "clear_db_rows": True,
+                "sqlite_delete": [{
+                    "table": "VEHICLES_LOCAL",
+                    "where": f"VEHICLE_PLATE_NUM in ({sql_quote(pair['target_plate'])}, {sql_quote(pair['other_plate'])})"
+                }],
+                "sqlite_exec": [
+                    vehicle_insert_sql(pair["target_plate"], False),
+                    vehicle_insert_sql(pair["other_plate"], True)
+                ]
+            },
+            "verify": {"sqlite_exists": [
+                {
+                    "table": "VEHICLES_LOCAL",
+                    "where": f"VEHICLE_PLATE_NUM = {sql_quote(pair['target_plate'])} and VEHICLE_OFTEN_USE = 1",
+                    "weight": "target_vehicle_default"
+                },
+                {
+                    "table": "VEHICLES_LOCAL",
+                    "where": f"VEHICLE_PLATE_NUM = {sql_quote(pair['other_plate'])} and ifnull(VEHICLE_OFTEN_USE, 0) = 0",
+                    "weight": "other_vehicle_not_default"
                 }
             ]}
         })
