@@ -20,6 +20,20 @@ PACKAGE = "com.booking"
 APP_ROOT = f"/data/user/0/{PACKAGE}"
 PREFS_PATH = f"{APP_ROOT}/shared_prefs/com.booking_preferences.xml"
 GDPR_PATH = f"{APP_ROOT}/shared_prefs/gdpr_settings.xml"
+ONETRUST_USER_PREF_GLOB = f"{APP_ROOT}/shared_prefs/com.onetrust.otpublishers.headless.preference.OTT_USER_*.xml"
+ONETRUST_COOKIE_GROUPS = {
+    "functional": "C0003",
+    "analytical": "C0002",
+    "marketing": "C0004",
+}
+SORT_ALIASES = {
+    "review_score": {"review_score", "bayesian_review_score"},
+}
+SABA_FILTER_ALIASES = (
+    ("propertytype=", "htid="),
+    ("freecancellation=", "fc="),
+    ("mealplan=breakfastincluded", "mealplan=1"),
+)
 ADB_TIMEOUT_SECONDS = 30
 ADB_ROOT_TIMEOUT_SECONDS = 10
 ADB_PROBE_TIMEOUT_SECONDS = 5
@@ -171,6 +185,60 @@ def render_existing_map(xml_text, updates):
 def update_xml_values(serial, remote_path, updates):
     xml_text = pull_text(serial, remote_path)
     push_text(serial, remote_path, render_existing_map(xml_text, updates))
+
+
+def remote_file_exists(serial, remote_path):
+    return adb_shell(serial, f"if test -f {remote_path}; then echo yes; fi", check=False).strip() == "yes"
+
+
+def onetrust_user_prefs_path(serial):
+    output = adb_shell(
+        serial,
+        f"ls -1 {ONETRUST_USER_PREF_GLOB} 2>/dev/null | head -1",
+        check=False,
+    ).strip()
+    return output or None
+
+
+def read_privacy_settings(serial):
+    if remote_file_exists(serial, GDPR_PATH):
+        gdpr = parse_map(pull_text(serial, GDPR_PATH))
+        return {key: gdpr.get(key) for key in ONETRUST_COOKIE_GROUPS}
+
+    onetrust_path = onetrust_user_prefs_path(serial)
+    if not onetrust_path:
+        raise RuntimeError(
+            "No Booking privacy preferences found. Expected gdpr_settings.xml or OneTrust OTT_USER prefs."
+        )
+    prefs = parse_map(pull_text(serial, onetrust_path))
+    consent = json.loads(prefs.get("OTT_CONSENT_STATUS", "{}"))
+    return {
+        key: consent.get(group_id) in (1, True, "1", "true")
+        for key, group_id in ONETRUST_COOKIE_GROUPS.items()
+    }
+
+
+def update_privacy_settings(serial, updates):
+    if remote_file_exists(serial, GDPR_PATH):
+        update_xml_values(serial, GDPR_PATH, updates)
+        return
+
+    onetrust_path = onetrust_user_prefs_path(serial)
+    if not onetrust_path:
+        raise RuntimeError(
+            "No Booking privacy preferences found. Launch Booking once so OneTrust prefs are created."
+        )
+    prefs = parse_map(pull_text(serial, onetrust_path))
+    consent = json.loads(prefs.get("OTT_CONSENT_STATUS", "{}"))
+    for key, value in updates.items():
+        group_id = ONETRUST_COOKIE_GROUPS.get(key)
+        if group_id:
+            consent[group_id] = 1 if value else 0
+    update_xml_values(
+        serial,
+        onetrust_path,
+        {"OTT_CONSENT_STATUS": json.dumps(consent, separators=(",", ":"))},
+    )
 
 
 def normalized_query(query):
@@ -488,6 +556,43 @@ def get_queries(serial):
     return queries
 
 
+def sort_values(sort):
+    values = {str(value).lower() for value in (sort.get("id"), sort.get("name")) if value}
+    expanded = set(values)
+    for value in values:
+        expanded.update(SORT_ALIASES.get(value, set()))
+    return expanded
+
+
+def normalize_saba_filter_text(value):
+    return unquote(value).lower().replace("::", "=").replace("_", "")
+
+
+def saba_filter_text_variants(value):
+    variants = {normalize_saba_filter_text(value)}
+    for left, right in SABA_FILTER_ALIASES:
+        for existing in tuple(variants):
+            variants.add(existing.replace(left, right))
+            variants.add(existing.replace(right, left))
+    return variants
+
+
+def saba_sort_matches(serial, expected):
+    expected_values = sort_values(expected)
+    for url in latest_saba_urls(serial):
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        if expected.get("arrival_date") and query.get("arrival_date", [""])[0] != expected["arrival_date"]:
+            continue
+        if expected.get("departure_date") and query.get("departure_date", [""])[0] != expected["departure_date"]:
+            continue
+        if expected.get("destination") and expected["destination"].lower() not in unquote(url).lower():
+            continue
+        if query.get("order_by", [""])[0].lower() in expected_values:
+            return True
+    return False
+
+
 def any_query_matches(serial, expected):
     queries = get_queries(serial)
     details = {}
@@ -519,10 +624,19 @@ def any_query_matches(serial, expected):
     if "room_count" in expected:
         details["rooms"] = field_ok("room_count")
     if "sort" in expected:
+        expected_values = sort_values(expected["sort"])
         details["sort"] = any(
-            query.get("sort", {}).get("id") == expected["sort"].get("id")
-            or query.get("sort", {}).get("name") == expected["sort"].get("name")
+            query.get("sort", {}).get("id", "").lower() in expected_values
+            or query.get("sort", {}).get("name", "").lower() in expected_values
             for query in queries
+        ) or saba_sort_matches(
+            serial,
+            {
+                **expected["sort"],
+                "arrival_date": expected.get("arrival_date"),
+                "departure_date": expected.get("departure_date"),
+                "destination": expected.get("location_contains"),
+            },
         )
     if "travel_purpose" in expected:
         details["travel_purpose"] = field_ok("travel_purpose")
@@ -555,7 +669,13 @@ def saba_query_matches(serial, expected):
         value = query.get(expected["param"], [""])[0] if expected.get("param") else ""
         haystack = unquote(value).lower()
         raw_haystack = (value + " " + url).lower()
-        return any(token.lower() in haystack or token.lower() in raw_haystack for token in expected["contains_any"])
+        normalized_haystack = " ".join(saba_filter_text_variants(value + " " + url))
+        return any(
+            token.lower() in haystack
+            or token.lower() in raw_haystack
+            or any(variant in normalized_haystack for variant in saba_filter_text_variants(token))
+            for token in expected["contains_any"]
+        )
     return False
 
 
@@ -570,7 +690,7 @@ def init_task(serial, task):
     if "prefs" in init:
         update_xml_values(serial, PREFS_PATH, init["prefs"])
     if "gdpr" in init:
-        update_xml_values(serial, GDPR_PATH, init["gdpr"])
+        update_privacy_settings(serial, init["gdpr"])
     if "permissions" in init:
         init_permissions(serial, init["permissions"])
     clear_runtime_environment(serial)
@@ -589,7 +709,7 @@ def verify_task(serial, task):
         for key, expected in verify["prefs"].items():
             checks[key] = prefs.get(key) == expected
     if "gdpr" in verify:
-        gdpr = parse_map(pull_text(serial, GDPR_PATH))
+        gdpr = read_privacy_settings(serial)
         for key, expected in verify["gdpr"].items():
             checks[key] = gdpr.get(key) == expected
     if "permissions" in verify:
@@ -608,7 +728,7 @@ def verify_task(serial, task):
 def main():
     global SUITE_PATH
     parser = argparse.ArgumentParser()
-    parser.add_argument("--serial", default=os.environ.get("ANDROID_SERIAL", "emulator-5554"))
+    parser.add_argument("--serial", default=os.environ.get("ANDROID_SERIAL", "1.95.63.137:5555"))
     parser.add_argument("--suite", default=str(SUITE_PATH))
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("list")

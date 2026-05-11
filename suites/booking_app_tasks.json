@@ -150,29 +150,6 @@
       }
     },
     {
-      "id": "stay_search_business_random",
-      "category": "accommodation_search",
-      "description": "随机生成商务出行住宿搜索任务。",
-      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}，并把这次住宿标记为商务出行。",
-      "parameters": {
-        "inherits": "stay_search_random",
-        "travel_purpose": {
-          "id": "business",
-          "baseline": "not_selected"
-        }
-      },
-      "reward": {
-        "max": 1.0,
-        "weights": {
-          "dates": 0.2,
-          "destination": 0.2,
-          "occupancy": 0.25,
-          "rooms": 0.1,
-          "travel_purpose": 0.25
-        }
-      }
-    },
-    {
       "id": "stay_search_saba_filter_random",
       "category": "accommodation_search",
       "description": "随机生成带单个结果页筛选要求的住宿搜索任务；验证器读取最新 mobile.saba 请求参数。",
@@ -551,8 +528,8 @@
     {
       "id": "stay_search_complex_filter_random",
       "category": "accommodation_search",
-      "description": "随机生成多条件 Booking 搜索任务：基础搜索参数 + 2到3个结果页筛选项 + 可选排序 + 可选商务出行。",
-      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}，筛选出{filters_zh}{sort_clause_zh}{business_clause_zh}。",
+      "description": "随机生成多条件 Booking 搜索任务：基础搜索参数 + 2到3个结果页筛选项 + 可选排序。",
+      "instruction_template": "在 Booking 里搜索{destination_zh}的住宿，入住 {arrival_date}，退房 {departure_date}，{occupancy_zh}，{room_count_zh}，筛选出{filters_zh}{sort_clause_zh}。",
       "parameters": {
         "inherits": "stay_search_random",
         "filter_count": [
@@ -728,8 +705,7 @@
             "name_zh": "距离市中心"
           }
         ],
-        "include_sort_probability": 1.0,
-        "include_business_probability": 1.0
+        "include_sort_probability": 1.0
       },
       "reward": {
         "max": 1.0,
@@ -738,8 +714,7 @@
           "destination": 0.12,
           "occupancy": 0.16,
           "rooms": 0.08,
-          "sort": 0.12,
-          "travel_purpose": 0.1,
+          "sort": 0.22,
           "latest_saba_query": 0.3
         }
       }
